@@ -1,5 +1,6 @@
+var token = require('./DiscordToken.js');
 const Discord = require("discord.js");
-const ud = require('urban-dictionary')
+const ud = require('urban-dictionary');
 const bot = new Discord.Client();
 
 function Get(yourUrl) {
@@ -52,4 +53,5 @@ bot.on("message", message => {
   }
 });
 
-bot.login("Mzc3MzE1MDIwMzY4NzczMTIx.DgsYzg.XEbLcsUuERRsllIslgXNRGJ6HqY");
+console.log(token)
+// bot.login(token.token);
