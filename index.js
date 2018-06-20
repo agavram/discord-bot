@@ -1,4 +1,5 @@
 const Discord = require("discord.js");
+const ud = require('urban-dictionary')
 const bot = new Discord.Client();
 
 function Get(yourUrl) {
@@ -11,10 +12,11 @@ function Get(yourUrl) {
 
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
+  bot.user.setActivity('!define')
 });
 
 bot.on("message", message => {
-  console.log("Channel: " + message.channel);
+  // console.log("Channel: " + message.channel);
   if (!message.author.bot) {
     var msg = message.content;
     msg = msg.toLowerCase();
@@ -30,38 +32,24 @@ bot.on("message", message => {
       });
     }
 
-    // I know I need a better way of searching through the array
-    var badWords = require("badwords/array");
-    for (var i = 0; i < badWords.length; i++) {
-      if (msg.search(badWords[i]) != -1) {
-        var msg = badWords[i];
-        message.channel.send(
-          "Whoa u said " + badWords[i] + ". Watch your language kiddo.",
-          {
-            // file: 'https://i.imgur.com/DpxncM2.jpg'
+    if (msg.substring(0, 7) == "!define") {
+      msg.replace(/\s+/g, " ").trim()
+      msg.toLowerCase
+      if (msg.length == 7) {
+        message.channel.send("Use !define {term} to get the definition of a word from urban dictionary.");
+      } else {
+        var term = msg.substring(8, msg.length)
+        ud.term(term, function (error, entries, tags, sounds) {
+          if (error) {
+            message.channel.send("Could not find term: " + term);
+          } else {
+            message.channel.send(entries[0].word + ": " + entries[0].definition)
+            message.channel.send(entries[0].example)
           }
-        );
-      }
-    }
-
-    if (
-      msg.search("you are") != -1 ||
-      msg.search("ur") != -1 ||
-      msg.search("no u") != -1
-    ) {
-      message.channel.send("no u");
-    }
-
-    var lordsName = ["jesus", "god", "alan", "yao"];
-    for (var i = 0; i < lordsName.length; i++) {
-      if (msg.search(lordsName[i]) != -1) {
-        message.channel.send(
-          "Please do not use the Lord's name (" + lordsName[i] + ") in vain."
-        );
-        break;
+        })
       }
     }
   }
 });
 
-bot.login("");
+bot.login("Mzc3MzE1MDIwMzY4NzczMTIx.DgsYzg.XEbLcsUuERRsllIslgXNRGJ6HqY");
