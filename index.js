@@ -14,17 +14,37 @@ function Get(yourUrl) {
 
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
-  bot.user.setActivity('f in chat boys')
+  bot.user.setActivity('f in chat boys');
+  // var json_obj = JSON.parse(
+  //   Get("https://www.reddit.com/r/dankmemes/hot.json")
+  // );
 });
 
-var j = schedule.scheduleJob('00 * * * *', function(){
+var j = schedule.scheduleJob('00 * * * *', function () {
   var json_obj = JSON.parse(
-            Get("https://www.reddit.com/r/dankmemes/hot.json")
-          );
-      var memeURL = json_obj.data.children[0].data.url;
-      var memeTitle = json_obj.data.children[0].data.title;
-  bot.channels.get("476157539013361684").send(memeTitle, {
-    file: memeURL
+    Get("https://www.reddit.com/r/dankmemes/hot.json")
+  );
+  var index = 0;
+  var sticked = json_obj.data.children[index].data.stickied;
+  if (sticked) {
+    index++;
+    sticked = json_obj.data.children[index].data.stickied;
+  }
+  bot.channels.get("476157539013361684").send({
+    embed: {
+      title: json_obj.data.children[index].data.title,
+      url: ("https://www.reddit.com" + json_obj.data.children[index].data.permalink),
+      color: 16728368,
+      timestamp: new Date(json_obj.data.children[index].data.created_utc * 1000).toISOString(),
+      footer: {},
+      image: {
+        url: json_obj.data.children[index].data.url
+      },
+      author: {
+        "name": json_obj.data.children[index].data.author,
+        "url": ("https://www.reddit.com/u/" + json_obj.data.children[index].data.author)
+      }
+    }
   });
 });
 
