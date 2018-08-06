@@ -28,8 +28,8 @@ var j = schedule.scheduleJob('00 * * * *', function(){
   });
 });
 
-bot.on("message", message => {
-  console.log("Channel: " + message.channel.id); });
+// bot.on("message", message => {
+//   console.log("Channel: " + message.channel.id); });
 //   if (!message.author.bot) {
 //     var msg = message.content;
 //     msg = msg.toLowerCase();
