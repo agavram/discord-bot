@@ -1,8 +1,15 @@
 var token = require('./Discord_Token.js');
 const Discord = require("discord.js");
-const ud = require('urban-dictionary');
+var moment = require('moment');
+// const ud = require('urban-dictionary');
+
 var schedule = require('node-schedule');
+var date = moment();
+var lastDate = moment({day: date.date(), month: date.month(), year: date.year()});
 const bot = new Discord.Client();
+console.log(lastDate.toISOString());
+var posts = [];
+
 
 function Get(yourUrl) {
   var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
@@ -21,6 +28,12 @@ bot.on("ready", () => {
 });
 
 var j = schedule.scheduleJob('00 * * * *', function () {
+  if(moment() > lastDate) {
+    date = moment();
+    lastDate = moment({day: date.date(), month: date.month(), year: date.year()});
+    posts = [];
+  }
+
   var json_obj = JSON.parse(
     Get("https://www.reddit.com/r/dankmemes/hot.json")
   );
@@ -30,6 +43,16 @@ var j = schedule.scheduleJob('00 * * * *', function () {
     index++;
     sticked = json_obj.data.children[index].data.stickied;
   }
+  
+  for (let i = 0; i < posts.length; i++) {
+    if(json_obj.data.children[index].data.title == posts[i]) {
+      index++;
+    } else {
+      posts.push(son_obj.data.children[index].data.title);
+      break;
+    }
+  }
+
   bot.channels.get("476157539013361684").send({
     embed: {
       title: json_obj.data.children[index].data.title,
