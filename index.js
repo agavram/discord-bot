@@ -28,7 +28,7 @@ bot.on("ready", () => {
 });
 
 var j = schedule.scheduleJob('00 * * * *', function () {
-  if(moment() > lastDate) {
+  if(moment({day: date.date() - 1, month: date.month(), year: date.year()}) > lastDate) {
     date = moment();
     lastDate = moment({day: date.date(), month: date.month(), year: date.year()});
     posts = [];
