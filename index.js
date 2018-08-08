@@ -28,7 +28,7 @@ bot.on("ready", () => {
 });
 
 var j = schedule.scheduleJob('00 * * * *', function () {
-  if (moment({ day: date.date() - 1, month: date.month(), year: date.year() }) > lastDate) {
+  if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
@@ -51,7 +51,6 @@ var j = schedule.scheduleJob('00 * * * *', function () {
       break;
     }
   }
-
   posts.push(json_obj.data.children[index].data.title);
 
   bot.channels.get("476157539013361684").send({
