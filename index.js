@@ -5,7 +5,7 @@ const ud = require('urban-dictionary');
 
 var schedule = require('node-schedule');
 var date = moment();
-var lastDate = moment({day: date.date(), month: date.month(), year: date.year()});
+var lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
 const bot = new Discord.Client();
 console.log(lastDate.toISOString());
 var posts = [];
@@ -28,9 +28,9 @@ bot.on("ready", () => {
 });
 
 var j = schedule.scheduleJob('00 * * * *', function () {
-  if(moment({day: date.date() - 1, month: date.month(), year: date.year()}) > lastDate) {
+  if (moment({ day: date.date() - 1, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
-    lastDate = moment({day: date.date(), month: date.month(), year: date.year()});
+    lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
   }
 
@@ -43,9 +43,9 @@ var j = schedule.scheduleJob('00 * * * *', function () {
     index++;
     sticked = json_obj.data.children[index].data.stickied;
   }
-  
+
   for (let i = 0; i < posts.length; i++) {
-    if(json_obj.data.children[index].data.title == posts[i]) {
+    if (json_obj.data.children[index].data.title == posts[i]) {
       index++;
     } else {
       break;
@@ -99,8 +99,8 @@ bot.on("message", message => {
           if (error) {
             message.channel.send("Could not find term: " + term);
           } else {
-            message.channel.send(entries[0].word + ": " + entries[0].definition)
-            message.channel.send(entries[0].example)
+            message.channel.send(entries[0].word + ": " + entries[0].definition.replace(/[\[\]']+/g, ""))
+            message.channel.send(entries[0].example.replace(/[\[\]']+/g, ""))
           }
         })
       }
