@@ -44,12 +44,8 @@ var j = schedule.scheduleJob('00 * * * *', function () {
     sticked = json_obj.data.children[index].data.stickied;
   }
 
-  for (let i = 0; i < posts.length; i++) {
-    if (json_obj.data.children[index].data.title == posts[i]) {
-      index++;
-    } else {
-      break;
-    }
+  while(posts.includes(json_obj.data.children[index].data.stickied)) {
+    index++;
   }
   posts.push(json_obj.data.children[index].data.title);
 
