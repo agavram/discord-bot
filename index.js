@@ -27,11 +27,13 @@ bot.on("ready", () => {
   // );
 });
 
-var j = schedule.scheduleJob('00 * * * *', function () {
+var j = schedule.scheduleJob('*/0.5 * * * *', function () {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
+    bot.channels.get("377316512454672386").send('reset');
+    bot.channels.get("377316512454672386").send((moment({ day: date.date() - 2, month: date.month(), year: date.year() }).toISOString() + ", " + lastDate.toISOString()));
   }
 
   var json_obj = JSON.parse(
