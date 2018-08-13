@@ -86,6 +86,10 @@ bot.on("message", message => {
       message.reply('Shut the fuck up');
     }
 
+    if(msg.substring(0,5) == "!spam") {
+      message.channel.send('@Drinks 100% Deet Bug Spray');
+    }
+
     if (msg.substring(0, 7) == "!define") {
       msg.replace(/\s+/g, " ").trim()
       msg.toLowerCase
