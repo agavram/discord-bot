@@ -41,8 +41,8 @@ var j = schedule.scheduleJob('00 * * * *', function () {
   while (json_obj.data.children[index].data.stickied) {
     index++;
   }
- 
-  while(posts.includes(json_obj.data.children[index].data.stickied)) {
+
+  while(posts.includes(json_obj.data.children[index].data.title)) {
     index++;
   }
   posts.push(json_obj.data.children[index].data.title);
@@ -66,6 +66,7 @@ var j = schedule.scheduleJob('00 * * * *', function () {
 });
 
 bot.on("message", message => {
+
   if (!message.author.bot) {
     var msg = message.content;
     msg = msg.toLowerCase();
@@ -80,6 +81,10 @@ bot.on("message", message => {
     //     file: memeURL
     //   });
     // }
+
+    if(message.author.id == 359789110937911306) {
+      message.reply('Shut the fuck up');
+    }
 
     if (msg.substring(0, 7) == "!define") {
       msg.replace(/\s+/g, " ").trim()
