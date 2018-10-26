@@ -80,25 +80,25 @@ var j = schedule.scheduleJob('00 * * * *', function () {
       }
     }
   });
-  
-  bot.channels.get("505451745854619650").send({
-    embed: {
-      title: json_obj_furry.data.children[index].data.title,
-      url: ("https://www.reddit.com" + json_obj_furry.data.children[index].data.permalink),
-      color: 16728368,
-      timestamp: new Date(json_obj_furry.data.children[index].data.created_utc * 1000).toISOString(),
-      footer: {},
-      image: {
-        url: json_obj_furry.data.children[index].data.url
-      },
-      author: {
-        "name": json_obj_furry.data.children[index].data.author,
-        "url": ("https://www.reddit.com/u/" + json_obj_furry.data.children[index].data.author)
-      }
-    }
-  });
-});
 
+//   bot.channels.get("505451745854619650").send({
+//     embed: {
+//       title: json_obj_furry.data.children[index].data.title,
+//       url: ("https://www.reddit.com" + json_obj_furry.data.children[index].data.permalink),
+//       color: 16728368,
+//       timestamp: new Date(json_obj_furry.data.children[index].data.created_utc * 1000).toISOString(),
+//       footer: {},
+//       image: {
+//         url: json_obj_furry.data.children[index].data.url
+//       },
+//       author: {
+//         "name": json_obj_furry.data.children[index].data.author,
+//         "url": ("https://www.reddit.com/u/" + json_obj_furry.data.children[index].data.author)
+//       }
+//     }
+//   });
+// });
+}
 // bot.on("message", message => {
 
 //   if (!message.author.bot) {
