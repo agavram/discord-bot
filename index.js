@@ -9,6 +9,7 @@ var lastDate = moment({ day: date.date(), month: date.month(), year: date.year()
 const bot = new Discord.Client();
 console.log(lastDate.toISOString());
 var posts = [];
+var furryPosts = [];
 
 
 function Get(yourUrl) {
@@ -32,11 +33,26 @@ var j = schedule.scheduleJob('00 * * * *', function () {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
+    furryPosts = [];
   }
 
   var json_obj = JSON.parse(
     Get("https://www.reddit.com/r/dankmemes/hot.json")
   );
+  
+  var json_obj_furry = JSON.parse(
+    Get("https://www.reddit.com/r/furry_irl/hot.json")
+  );
+  
+  var furry_index = 0;
+  while(json_obj_furry.data.children[furry_index].data.stickied) {
+      furry_index++;
+  }
+  
+  while(furryPosts.includes(json_obj.data.children[furry_index].data.title)) {
+    furry_index++;
+  }
+  
   var index = 0;
   while (json_obj.data.children[index].data.stickied) {
     index++;
@@ -46,6 +62,7 @@ var j = schedule.scheduleJob('00 * * * *', function () {
     index++;
   }
   posts.push(json_obj.data.children[index].data.title);
+  furryPosts.push(json_obj_furry.data.children[index].data.title);
 
   bot.channels.get("476157539013361684").send({
     embed: {
@@ -60,6 +77,23 @@ var j = schedule.scheduleJob('00 * * * *', function () {
       author: {
         "name": json_obj.data.children[index].data.author,
         "url": ("https://www.reddit.com/u/" + json_obj.data.children[index].data.author)
+      }
+    }
+  });
+  
+  bot.channels.get("505451745854619650").send({
+    embed: {
+      title: json_obj_furry.data.children[index].data.title,
+      url: ("https://www.reddit.com" + json_obj_furry.data.children[index].data.permalink),
+      color: 16728368,
+      timestamp: new Date(json_obj_furry.data.children[index].data.created_utc * 1000).toISOString(),
+      footer: {},
+      image: {
+        url: json_obj_furry.data.children[index].data.url
+      },
+      author: {
+        "name": json_obj_furry.data.children[index].data.author,
+        "url": ("https://www.reddit.com/u/" + json_obj_furry.data.children[index].data.author)
       }
     }
   });
