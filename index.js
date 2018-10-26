@@ -97,10 +97,9 @@ var j = schedule.scheduleJob('00 * * * *', function () {
 //       }
 //     }
 //   });
-// });
-}
-// bot.on("message", message => {
+});
 
+// bot.on("message", message => {
 //   if (!message.author.bot) {
 //     var msg = message.content;
 //     msg = msg.toLowerCase();
