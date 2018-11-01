@@ -23,10 +23,6 @@ function Get(yourUrl) {
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
   bot.user.setActivity('f in chat boys');
-  bot.channels.get("476157539013361684").send('MEMES WILL NO LONGER BE POSTED IN THIS CHAT. CHECK THE ASPARAGUS SERVER CHANNEL *DARK AND DANK* FOR MEMES INSTEAD');
-  // var json_obj = JSON.parse(
-  //   Get("https://www.reddit.com/r/dankmemes/hot.json")
-  // );
 });
 
 var j = schedule.scheduleJob('00 * * * *', function () {
