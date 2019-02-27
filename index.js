@@ -75,12 +75,12 @@ var j = schedule.scheduleJob('00 * * * *', function () {
   posts.push(json_obj.data.children[index].data.title);
 // 507418006465282058
   
-  bot.channels.get("507418006465282058").send({
+  bot.channels.get("509569913543852033").send({
     embed: {
       title: json_obj.data.children[index].data.title,
       url: ("https://www.reddit.com" + json_obj.data.children[index].data.permalink),
       color: 16728368,
-      timestamp: new Date(json_obj.data.children[index].data.created_utc * 1000).toISOString(),
+      timestamp: new Date(json_obj.data.children=[index].data.created_utc * 1000).toISOString(),
       footer: {},
       image: {
         url: json_obj.data.children[index].data.url
@@ -99,13 +99,13 @@ bot.on("message", message => {
     msg = msg.toLowerCase();
     
     if (msg.substring(0, 9) == "!phonetic") {
-        var input = msg.substring(9, msg.length)
+        var input = msg.substring(10, msg.length)
         var output = "";
         for (var i = 0; i < input.length; i++) {
             if (phonetics[input.charAt(i).toUpperCase()] !== undefined) {
                 output += phonetics[input.charAt(i).toUpperCase()] + " ";
             } else if (input.charAt(i) == " ")  {
-                output = output.substring(0, output.length - 1) + "---";
+                output = output.substring(0, output.length - 1) + "|";
             } else {
                 output = output.substring(0, output.length - 1) + input.charAt(i);
             }
