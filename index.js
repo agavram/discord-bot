@@ -53,7 +53,7 @@ bot.on("ready", () => {
 });
 
 var j = schedule.scheduleJob("00 * * * *", postMeme());
-postMeme();
+function postMeme();
 postMeme() {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
