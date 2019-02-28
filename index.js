@@ -55,6 +55,7 @@ bot.on("ready", () => {
 });
 
 function postMeme() {
+  try {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
@@ -85,6 +86,9 @@ function postMeme() {
         }
       }
     });
+  } catch (error) {
+    bot.channels.get("509569913543852033").send("Error: " + error);
+  }
 }
 
 bot.on("message", message => {
