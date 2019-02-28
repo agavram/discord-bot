@@ -72,9 +72,6 @@ function postMeme() {
         title: json_obj.data.children[index].data.title,
         url: "https://www.reddit.com" + json_obj.data.children[index].data.permalink,
         color: 16728368,
-        timestamp: new Date(
-          (json_obj.data.children = [index].data.created_utc * 1000)
-        ).toISOString(),
         footer: {},
         image: {
           url: json_obj.data.children[index].data.url
