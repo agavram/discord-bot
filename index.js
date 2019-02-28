@@ -52,22 +52,17 @@ bot.on("ready", () => {
   bot.user.setActivity("f in chat boys");
 });
 
-var j = schedule.scheduleJob("00 * * * *", function() {
+var j = schedule.scheduleJob("00 * * * *", postMeme());
+postMeme();
+postMeme() {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
   }
-
-  try {
     var json_obj = JSON.parse(Get("https://www.reddit.com/r/dankmemes/hot.json"));
-
     var index = 0;
-    while (json_obj.data.children[index].data.stickied) {
-      index++;
-    }
-
-    while (posts.includes(json_obj.data.children[index].data.title)) {
+    while (json_obj.data.children[index].data.stickied || posts.includes(json_obj.data.children[index].data.title)) {
       index++;
     }
     posts.push(json_obj.data.children[index].data.title);
@@ -90,10 +85,7 @@ var j = schedule.scheduleJob("00 * * * *", function() {
         }
       }
     });
-  } catch (error) {
-    bot.channels.get("509569913543852033").send(error);
-  }
-});
+}
 
 bot.on("message", message => {
   if (!message.author.bot) {
