@@ -51,9 +51,8 @@ bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
   bot.user.setActivity("f in chat boys");
   postMeme();
+  var j = schedule.scheduleJob("00 * * * *", postMeme());
 });
-
-var j = schedule.scheduleJob("00 * * * *", postMeme());
 
 function postMeme() {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
