@@ -50,12 +50,15 @@ function Get(yourUrl) {
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
   bot.user.setActivity("f in chat boys");
-  postMeme();
-  var j = schedule.scheduleJob("00 * * * *", postMeme);
+  try {
+    postMeme();
+    var j = schedule.scheduleJob("00 * * * *", postMeme);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 function postMeme() {
-  try {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
@@ -85,10 +88,7 @@ function postMeme() {
           url: "https://www.reddit.com/u/" + json_obj.data.children[index].data.author
         }
       }
-    });
-  } catch (error) {
-    bot.channels.get("509569913543852033").send("Error: " + error);
-  }
+  });
 }
 
 bot.on("message", message => {
@@ -113,7 +113,6 @@ bot.on("message", message => {
 
     if (msg.substring(0, 7) == "!define") {
       msg.replace(/\s+/g, " ").trim();
-      msg.toLowerCase;
       if (msg.length == 7) {
         message.channel.send(
           "Use !define {term} to get the definition of a word from urban dictionary."
