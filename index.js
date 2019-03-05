@@ -39,12 +39,10 @@ const bot = new Discord.Client();
 console.log(lastDate.toISOString());
 var posts = [];
 
-function Get(yourUrl) {
-  var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
-  var Httpreq = new XMLHttpRequest();
-  Httpreq.open("GET", yourUrl, false);
-  Httpreq.send(null);
-  return Httpreq.responseText;
+const axios = require("axios");
+
+async function get(url) {
+  return axios.get(url);
 }
 
 bot.on("ready", () => {
@@ -54,17 +52,18 @@ bot.on("ready", () => {
     postMeme();
     var j = schedule.scheduleJob("00 * * * *", postMeme);
   } catch (error) {
-    console.log(error);
+      console.log(error);
   }
 });
 
-function postMeme() {
+async function postMeme() {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
   }
-    var json_obj = JSON.parse(Get("https://www.reddit.com/r/dankmemes/hot.json"));
+    var json_obj = await get("https://www.reddit.com/r/dankmemes/hot.json");
+    json_obj = json_obj.data;
     var index = 0;
     while (json_obj.data.children[index].data.stickied || posts.includes(json_obj.data.children[index].data.title)) {
       index++;
