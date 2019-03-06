@@ -29,15 +29,19 @@ const phonetics = {
 const Discord = require("discord.js");
 const bot = new Discord.Client();
 var token = require("./Discord_Token.js");
-var moment = require("moment");
-const ud = require("urban-dictionary");
 
-var schedule = require("node-schedule");
+const moment = require("moment");
+const ud = require("urban-dictionary");
+const storage = require("node-persist");
+const schedule = require("node-schedule");
+
 var date = moment();
-var lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
-var posts = [];
 
 var axios = require("axios");
+
+storage.initSync();
+var posts = storage.getItemSync("posts") ? storage.getItemSync("posts") : [];
+var lastDate = moment({ day: date.date() + 2, month: date.month(), year: date.year() });
 
 bot.on("ready", () => {
   console.log(lastDate.toISOString());
@@ -52,6 +56,7 @@ function postMeme() {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
+    storage.setItemSync("posts", "");
   }
     
     axios.get("https://www.reddit.com/r/dankmemes/hot.json")
@@ -62,6 +67,7 @@ function postMeme() {
         index++;
       }
       posts.push(json_obj.data.children[index].data.title);
+      storage.setItemSync("posts", posts);
 
       bot.channels.get("509569913543852033").send({
         embed: {
