@@ -47,45 +47,46 @@ bot.on("ready", () => {
   var j = schedule.scheduleJob("00 * * * *", postMeme);
 });
 
-async function postMeme() {
+function postMeme() {
   if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
     date = moment();
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
   }
-  console.log("posted");
-  var json_obj;
-  try {
-    json_obj = await axios.get("https://www.reddit.com/r/dankmemes/hot.json");
-  } catch (error) {
-    bot.channels.get("509569913543852033").send("Error connecting to reddit: " + error);
-    return;
-  }
-    json_obj = json_obj.data;
-    var index = 0;
-    while (json_obj.data.children[index].data.stickied || posts.includes(json_obj.data.children[index].data.title)) {
-      index++;
-    }
-    posts.push(json_obj.data.children[index].data.title);
-
-    bot.channels.get("509569913543852033").send({
-      embed: {
-        title: json_obj.data.children[index].data.title,
-        url: "https://www.reddit.com" + json_obj.data.children[index].data.permalink,
-        color: 16728368,
-        timestamp: new Date(
-          (json_obj.data.children[index].data.created_utc * 1000)
-        ).toISOString(),
-        footer: {},
-        image: {
-          url: json_obj.data.children[index].data.url
-        },
-        author: {
-          name: json_obj.data.children[index].data.author,
-          url: "https://www.reddit.com/u/" + json_obj.data.children[index].data.author
-        }
+    
+    axios.get("https://www.reddit.com/r/dankmemes/hot.json")
+    .then(function (response) {
+      var json_obj = response.data;
+      var index = 0;
+      while (json_obj.data.children[index].data.stickied || posts.includes(json_obj.data.children[index].data.title)) {
+        index++;
       }
-  });
+      posts.push(json_obj.data.children[index].data.title);
+
+      bot.channels.get("509569913543852033").send({
+        embed: {
+          title: json_obj.data.children[index].data.title,
+          url: "https://www.reddit.com" + json_obj.data.children[index].data.permalink,
+          color: 16728368,
+          timestamp: new Date(
+            (json_obj.data.children[index].data.created_utc * 1000)
+          ).toISOString(),
+          footer: {},
+          image: {
+            url: json_obj.data.children[index].data.url
+          },
+          author: {
+            name: json_obj.data.children[index].data.author,
+            url: "https://www.reddit.com/u/" + json_obj.data.children[index].data.author
+          }
+        }
+    });
+      console.log("posted");
+    })
+    .catch(function (error) {
+      bot.channels.get("509569913543852033").send("Error connecting to reddit: " + error);
+      console.log(error);
+    });
 }
 
 bot.on("message", message => {
