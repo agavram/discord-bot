@@ -26,9 +26,9 @@ const phonetics = {
   Y: "Yankee",
   Z: "Zulu"
 };
+const Discord = require("discord.js");
 const bot = new Discord.Client();
 var token = require("./Discord_Token.js");
-const Discord = require("discord.js");
 var moment = require("moment");
 const ud = require("urban-dictionary");
 
