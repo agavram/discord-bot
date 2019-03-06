@@ -26,7 +26,7 @@ const phonetics = {
   Y: "Yankee",
   Z: "Zulu"
 };
-
+const bot = new Discord.Client();
 var token = require("./Discord_Token.js");
 const Discord = require("discord.js");
 var moment = require("moment");
@@ -35,13 +35,12 @@ const ud = require("urban-dictionary");
 var schedule = require("node-schedule");
 var date = moment();
 var lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
-const bot = new Discord.Client();
-console.log(lastDate.toISOString());
 var posts = [];
 
 var axios = require("axios");
 
 bot.on("ready", () => {
+  console.log(lastDate.toISOString());
   console.log(`Logged in as ${bot.user.tag}`);
   bot.user.setActivity("f in chat boys");
   postMeme();
