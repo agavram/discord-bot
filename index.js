@@ -34,10 +34,9 @@ const moment = require("moment");
 const ud = require("urban-dictionary");
 const storage = require("node-persist");
 const schedule = require("node-schedule");
+const axios = require("axios");
 
 var date = moment();
-
-var axios = require("axios");
 
 storage.initSync();
 var posts = storage.getItemSync("posts") ? storage.getItemSync("posts") : [];
@@ -59,8 +58,9 @@ function postMeme() {
 		storage.setItemSync("posts", "");
 	}
 
+    var after = "";
 	axios
-		.get("https://www.reddit.com/r/dankmemes/hot.json")
+		.get("https://www.reddit.com/r/dankmemes/hot.json" + after)
 		.then(function(response) {
 			var json_obj = response.data;
 			var index = 0;
@@ -70,7 +70,11 @@ function postMeme() {
 				posts.includes(json_obj.data.children[index].data.id)
 			) {
 				index++;
-			}
+            }
+            if (json_obj.data.children.length == index) {
+                after = "?after=" + json_obj.data.after;
+                return;
+            }
 			posts.push(json_obj.data.children[index].data.id);
 			storage.setItemSync("posts", posts);
 
