@@ -48,12 +48,8 @@ async function get(url) {
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
   bot.user.setActivity("f in chat boys");
-  try {
-    postMeme();
-    var j = schedule.scheduleJob("00 * * * *", postMeme);
-  } catch (error) {
-      console.log(error);
-  }
+  postMeme();
+  var j = schedule.scheduleJob("00 * * * *", postMeme);
 });
 
 async function postMeme() {
@@ -62,7 +58,13 @@ async function postMeme() {
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
   }
-    var json_obj = await get("https://www.reddit.com/r/dankmemes/hot.json");
+  var json_obj;
+  try {
+    json_obj = await get("https://www.reddit.com/r/dankmemes/hot.json");
+  } catch (error) {
+    bot.channels.get("509569913543852033").send("Error connecting to reddit: " + error);
+    return;
+  }
     json_obj = json_obj.data;
     var index = 0;
     while (json_obj.data.children[index].data.stickied || posts.includes(json_obj.data.children[index].data.title)) {
