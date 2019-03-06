@@ -39,11 +39,7 @@ const bot = new Discord.Client();
 console.log(lastDate.toISOString());
 var posts = [];
 
-const axios = require("axios");
-
-async function get(url) {
-  return axios.get(url);
-}
+var axios = require("axios");
 
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
@@ -58,9 +54,10 @@ async function postMeme() {
     lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
     posts = [];
   }
+  console.log("posted");
   var json_obj;
   try {
-    json_obj = await get("https://www.reddit.com/r/dankmemes/hot.json");
+    json_obj = await axios.get("https://www.reddit.com/r/dankmemes/hot.json");
   } catch (error) {
     bot.channels.get("509569913543852033").send("Error connecting to reddit: " + error);
     return;
