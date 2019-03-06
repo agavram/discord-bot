@@ -96,7 +96,6 @@ function postMeme() {
 					}
 				}
 			});
-			console.log("posted");
 		})
 		.catch(function(error) {
 			bot.channels.get("509569913543852033").send("Error connecting to reddit: " + error);
