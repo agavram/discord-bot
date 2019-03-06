@@ -48,7 +48,6 @@ async function get(url) {
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}`);
   bot.user.setActivity("f in chat boys");
-  postMeme();
   var j = schedule.scheduleJob("00 * * * *", postMeme);
 });
 
