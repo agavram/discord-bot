@@ -149,4 +149,8 @@ bot.on("message", message => {
 	}
 });
 
+bot.on("error", info => {
+    console.log('Error event:\n' + JSON.stringify(info));
+});
+
 bot.login(token);
