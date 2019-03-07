@@ -50,6 +50,7 @@ bot.on("ready", () => {
 	var j = schedule.scheduleJob("00 * * * *", postMeme);
 });
 
+var after = "";
 function postMeme() {
 	if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
 		date = moment();
@@ -58,7 +59,6 @@ function postMeme() {
 		storage.setItemSync("posts", "");
 	}
 
-    var after = "";
 	axios
 		.get("https://www.reddit.com/r/dankmemes/hot.json" + after)
 		.then(function(response) {
@@ -70,10 +70,13 @@ function postMeme() {
 				posts.includes(json_obj.data.children[index].data.id)
 			) {
 				index++;
-            }
-            if (json_obj.data.children.length == index) {
+			}
+			if (json_obj.data.children.length == index) {
                 after = "?after=" + json_obj.data.after;
-                return;
+                postMeme();
+				return;
+			} else {
+                after = "";
             }
 			posts.push(json_obj.data.children[index].data.id);
 			storage.setItemSync("posts", posts);
