@@ -150,7 +150,7 @@ bot.on("message", message => {
 });
 
 bot.on("error", info => {
-    console.log('Error event:\n' + JSON.stringify(info));
+    console.log('Error event:\n' + info);
 });
 
 bot.login(token);
