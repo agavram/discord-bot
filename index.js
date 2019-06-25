@@ -50,7 +50,6 @@ bot.on("ready", () => {
 	var j = schedule.scheduleJob("00 * * * *", postMeme);
 });
 
-var after = "";
 function postMeme() {
 	if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
 		date = moment();
@@ -71,13 +70,6 @@ function postMeme() {
 			) {
 				index++;
 			}
-			if (json_obj.data.children.length == index) {
-                after = "?after=" + json_obj.data.after;
-                postMeme();
-				return;
-			} else {
-                after = "";
-            }
 			posts.push(json_obj.data.children[index].data.id);
 			storage.setItemSync("posts", posts);
 
