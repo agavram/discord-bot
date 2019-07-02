@@ -58,7 +58,7 @@ function postMeme() {
 	}
 
 	axios
-		.get("https://www.reddit.com/r/dankmemes/hot.json" + after)
+		.get("https://www.reddit.com/r/dankmemes/hot.json")
 		.then(function(response) {
 			var json_obj = response.data;
 			var index = 0;
