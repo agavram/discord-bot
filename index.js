@@ -146,4 +146,4 @@ bot.on("error", info => {
 
 bot.on("disconnect", console.log);
 
-bot.login(token);
+bot.login(process.env.BOT_TOKEN);
