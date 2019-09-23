@@ -28,7 +28,6 @@ const phonetics = {
 };
 const Discord = require("discord.js");
 const bot = new Discord.Client();
-var token = require("./Discord_Token.js");
 
 const moment = require("moment");
 const ud = require("urban-dictionary");
