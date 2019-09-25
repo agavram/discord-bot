@@ -143,7 +143,7 @@ bot.on("message", message => {
 });
 
 bot.on("error", info => {
-    console.log('Error event:\n' + info);
+    console.log('Error event:\n' + info.message);
 });
 
 bot.on("disconnect", console.log);
