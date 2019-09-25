@@ -52,8 +52,11 @@ function postMeme() {
 	if (moment({ day: date.date() - 2, month: date.month(), year: date.year() }) > lastDate) {
 		date = moment();
 		lastDate = moment({ day: date.date(), month: date.month(), year: date.year() });
-		posts = [];
-		storage.setItemSync("posts", "");
+		posts = storage.getItemSync("posts");
+		while (posts.length > 24) {
+			posts.shift();
+		}
+		storage.setItemSync("posts", posts);
 	}
 
 	axios
