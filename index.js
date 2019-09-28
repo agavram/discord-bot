@@ -55,7 +55,7 @@ bot.on("ready", () => {
 });
 
 function postMeme() {
-  posts = storage.getItemSync("posts");
+  posts = storage.getItemSync("posts") ? storage.getItemSync("posts") : []
   console.log(posts, {'maxArrayLength': null})
     if (
         moment({
