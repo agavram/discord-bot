@@ -39,6 +39,8 @@ var date = moment();
 
 storage.initSync();
 var posts = storage.getItemSync("posts") ? storage.getItemSync("posts") : [];
+console.log(posts, {'maxArrayLength': null})
+
 var lastDate = moment({
     day: date.date() + 2,
     month: date.month(),
@@ -53,6 +55,8 @@ bot.on("ready", () => {
 });
 
 function postMeme() {
+  posts = storage.getItemSync("posts");
+  console.log(posts, {'maxArrayLength': null})
     if (
         moment({
             day: date.date() - 2,
@@ -66,12 +70,10 @@ function postMeme() {
             month: date.month(),
             year: date.year()
         });
-        posts = storage.getItemSync("posts");
         while (posts.length > 24) {
             posts.shift();
         }
         storage.setItemSync("posts", posts);
-        console.log(posts, {'maxArrayLength': null})
     }
 
     axios
