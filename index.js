@@ -47,11 +47,11 @@ var lastDate = moment({
     year: date.year()
 });
 
-bot.on("ready", () => {
+bot.once("ready", () => {
     console.log(lastDate.toISOString());
     console.log(`Logged in as ${bot.user.tag}`);
     bot.user.setActivity("f in chat boys");
-    var j = schedule.scheduleJob("00 * * * *", postMeme);
+    var j = schedule.scheduleJob("0,30 * * * *", postMeme);
 });
 
 function postMeme() {
