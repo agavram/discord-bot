@@ -57,7 +57,7 @@ function postMeme() {
         .then(function (response) {
             var json_obj = response.data;
             var index = 0;
-            bot.channels.get("509569913543852033").fetchMessages({ limit: 48 })
+            bot.channels.get("509569913543852033").fetchMessages({ limit: 256 })
                 .then(messages => {
                     messages = messages.filter(m => m.author.id === '377315020368773121');
                     messages.forEach(msg => {
