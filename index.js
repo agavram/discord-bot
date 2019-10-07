@@ -47,6 +47,9 @@ bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
     bot.user.setActivity("f in chat boys");
     var j = schedule.scheduleJob("0,30 * * * *", postMeme);
+    for (let index = 0; index < 14; index++) {
+        postMeme();
+    }
 });
 
 function postMeme() {
@@ -57,7 +60,7 @@ function postMeme() {
         .then(function (response) {
             var json_obj = response.data;
             var index = 0;
-            bot.channels.get("509569913543852033").fetchMessages({ limit: 256 })
+            bot.channels.get("509569913543852033").fetchMessages({ limit: 100 })
                 .then(messages => {
                     messages = messages.filter(m => m.author.id === '377315020368773121');
                     messages.forEach(msg => {
