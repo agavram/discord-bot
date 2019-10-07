@@ -30,7 +30,6 @@ const Discord = require("discord.js");
 const bot = new Discord.Client();
 
 const moment = require("moment");
-const ud = require("urban-dictionary");
 const schedule = require("node-schedule");
 const axios = require("axios");
 
