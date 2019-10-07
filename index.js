@@ -47,9 +47,6 @@ bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
     bot.user.setActivity("f in chat boys");
     var j = schedule.scheduleJob("0,30 * * * *", postMeme);
-    for (let index = 0; index < 14; index++) {
-        postMeme();
-    }
 });
 
 function postMeme() {
