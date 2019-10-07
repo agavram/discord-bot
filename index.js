@@ -47,6 +47,7 @@ bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
     bot.user.setActivity("f in chat boys");
     var j = schedule.scheduleJob("0,30 * * * *", postMeme);
+    postMeme();
 });
 
 function postMeme() {
@@ -56,44 +57,56 @@ function postMeme() {
         .get("https://www.reddit.com/r/dankmemes/hot.json")
         .then(function(response) {
             var json_obj = response.data;
-
-            let previousPosts = await fetchPosts()
-            while (previousPosts.length != 0 && posts.length < 48) {
-                posts = posts.concat(previousPosts)
-                previousPosts = await fetchPosts()
-            }
-            
             var index = 0;
-            while (
-                (json_obj.data.children.length != index &&
-                    json_obj.data.children[index].data.stickied) ||
-                posts.includes("https://www.reddit.com" + json_obj.data.children[index].data.permalink)
-            ) {
-                index++;
-            }
+            bot.channels
+                .get("509569913543852033")
+                .fetchMessages({ limit: 100 })
+                .then(messages => {
+                    messages = messages.filter(
+                        m => m.author.id === "377315020368773121"
+                    );
+                    messages.forEach(msg => {
+                        msg.embeds.forEach(embed => {
+                            posts.push(embed.url);
+                        });
+                    });
 
-            bot.channels.get("509569913543852033").send({
-                embed: {
-                    title: json_obj.data.children[index].data.title,
-                    url:
-                        "https://www.reddit.com" +
-                        json_obj.data.children[index].data.permalink,
-                    color: 16728368,
-                    timestamp: new Date(
-                        json_obj.data.children[index].data.created_utc * 1000
-                    ).toISOString(),
-                    footer: {},
-                    image: {
-                        url: json_obj.data.children[index].data.url
-                    },
-                    author: {
-                        name: json_obj.data.children[index].data.author,
-                        url:
-                            "https://www.reddit.com/u/" +
-                            json_obj.data.children[index].data.author
+                    while (
+                        (json_obj.data.children.length != index &&
+                            json_obj.data.children[index].data.stickied) ||
+                        posts.includes(
+                            "https://www.reddit.com" +
+                                json_obj.data.children[index].data.permalink
+                        )
+                    ) {
+                        index++;
                     }
-                }
-            });
+
+                    bot.channels.get("509569913543852033").send({
+                        embed: {
+                            title: json_obj.data.children[index].data.title,
+                            url:
+                                "https://www.reddit.com" +
+                                json_obj.data.children[index].data.permalink,
+                            color: 16728368,
+                            timestamp: new Date(
+                                json_obj.data.children[index].data.created_utc *
+                                    1000
+                            ).toISOString(),
+                            footer: {},
+                            image: {
+                                url: json_obj.data.children[index].data.url
+                            },
+                            author: {
+                                name: json_obj.data.children[index].data.author,
+                                url:
+                                    "https://www.reddit.com/u/" +
+                                    json_obj.data.children[index].data.author
+                            }
+                        }
+                    });
+                })
+                .catch(console.error);
         })
         .catch(function(error) {
             bot.channels
@@ -151,25 +164,6 @@ bot.on("message", message => {
         }
     }
 });
-
-function fetchPosts() {
-    posts = [];
-    bot.channels
-        .get("509569913543852033")
-        .fetchMessages({ limit: 100 })
-        .then(messages => {
-            messages = messages.filter(
-                m => m.author.id === "377315020368773121"
-            );
-            messages.forEach(msg => {
-                msg.embeds.forEach(embed => {
-                    posts.push(embed.url);
-                });
-            });
-        })
-        .catch(console.error);
-    return posts;
-}
 
 bot.on("error", info => {
     console.log("Error event:\n" + info.message);
