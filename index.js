@@ -80,6 +80,12 @@ function postMeme() {
                         index++;
                     }
 
+                    var mediaUrl;
+                    if (json_obj.data.children[index].data.media != null) {
+                        mediaUrl = json_obj.data.children[index].data.media.oembed.thumbnail_url
+                    } else {
+                        mediaUrl = json_obj.data.children[index].data.url
+                    }
                     bot.channels.get("509569913543852033").send({
                         embed: {
                             title: json_obj.data.children[index].data.title,
@@ -93,7 +99,7 @@ function postMeme() {
                             ).toISOString(),
                             footer: {},
                             image: {
-                                url: json_obj.data.children[index].data.url
+                                url: mediaUrl
                             },
                             author: {
                                 name: json_obj.data.children[index].data.author,
