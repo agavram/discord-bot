@@ -46,7 +46,6 @@ bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
     bot.user.setActivity("f in chat boys");
     var j = schedule.scheduleJob("0,30 * * * *", postMeme);
-    postMeme();
 });
 
 function postMeme() {
@@ -167,6 +166,44 @@ bot.on("message", message => {
 bot.on("error", info => {
     console.log("Error event:\n" + info.message);
 });
+
+const events = {
+	MESSAGE_REACTION_ADD: 'messageReactionAdd',
+	MESSAGE_REACTION_REMOVE: 'messageReactionRemove',
+};
+
+bot.on('raw', async event => {
+	if (!events.hasOwnProperty(event.t)) return;
+
+	const { d: data } = event;
+	const user = bot.users.get(data.user_id);
+	const channel = bot.channels.get(data.channel_id) || await user.createDM();
+
+	if (channel.messages.has(data.message_id)) return;
+
+	const message = await channel.fetchMessage(data.message_id);
+	const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
+	let reaction = message.reactions.get(emojiKey);
+
+	if (!reaction) {
+		const emoji = new Discord.Emoji(bot.guilds.get(data.guild_id), data.emoji);
+		reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === bot.user.id);
+	}
+
+	bot.emit(events[event.t], reaction, user);
+});
+
+bot.on('messageReactionAdd', (reaction, user) => {
+    if (reaction.emoji.name === "👏" && reaction.message.embeds.length != 0) {
+        reaction.message.embeds[0].footer = {text: user.username + " shared this meme"};
+        bot.channels.get("509566135713398796").send({embed: reaction.message.embeds[0]})
+    }
+});
+
+bot.on('messageReactionRemove', (reaction, user) => {
+	console.log(`${user.username} removed their "${reaction.emoji.name}" reaction.`);
+});
+
 
 bot.on("disconnect", console.log);
 
