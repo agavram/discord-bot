@@ -202,7 +202,7 @@ bot.on('raw', async event => {
 bot.on('messageReactionAdd', (reaction, user) => {
     if (reaction.emoji.name === "👏" && reaction.message.embeds.length != 0) {
         bot.channels
-                .get("509569913543852033")
+                .get("509566135713398796")
                 .fetchMessages({ limit: 100 })
                 .then(messages => {
                     messages = messages.filter(
