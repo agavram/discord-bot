@@ -245,4 +245,4 @@ bot.on("messageReactionRemove", (reaction, user) => {
 
 bot.on("disconnect", console.log);
 
-bot.login("Mzc3MzE1MDIwMzY4NzczMTIx.XZ_iDg.TnuRxZNaGGUUrjxyvMVHyizdqP4");
+bot.login(process.env.BOT_TOKEN);
