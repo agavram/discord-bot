@@ -82,9 +82,11 @@ function postMeme() {
 
                     var mediaUrl;
                     if (json_obj.data.children[index].data.media != null) {
-                        mediaUrl = json_obj.data.children[index].data.media.oembed.thumbnail_url
+                        mediaUrl =
+                            json_obj.data.children[index].data.media.oembed
+                                .thumbnail_url;
                     } else {
-                        mediaUrl = json_obj.data.children[index].data.url
+                        mediaUrl = json_obj.data.children[index].data.url;
                     }
                     bot.channels.get("509569913543852033").send({
                         embed: {
@@ -174,58 +176,73 @@ bot.on("error", info => {
 });
 
 const events = {
-	MESSAGE_REACTION_ADD: 'messageReactionAdd',
-	MESSAGE_REACTION_REMOVE: 'messageReactionRemove',
+    MESSAGE_REACTION_ADD: "messageReactionAdd",
+    MESSAGE_REACTION_REMOVE: "messageReactionRemove"
 };
 
-bot.on('raw', async event => {
-	if (!events.hasOwnProperty(event.t)) return;
+bot.on("raw", async event => {
+    if (!events.hasOwnProperty(event.t)) return;
 
-	const { d: data } = event;
-	const user = bot.users.get(data.user_id);
-	const channel = bot.channels.get(data.channel_id) || await user.createDM();
+    const { d: data } = event;
+    const user = bot.users.get(data.user_id);
+    const channel =
+        bot.channels.get(data.channel_id) || (await user.createDM());
 
-	if (channel.messages.has(data.message_id)) return;
+    if (channel.messages.has(data.message_id)) return;
 
-	const message = await channel.fetchMessage(data.message_id);
-	const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
-	let reaction = message.reactions.get(emojiKey);
+    const message = await channel.fetchMessage(data.message_id);
+    const emojiKey = data.emoji.id
+        ? `${data.emoji.name}:${data.emoji.id}`
+        : data.emoji.name;
+    let reaction = message.reactions.get(emojiKey);
 
-	if (!reaction) {
-		const emoji = new Discord.Emoji(bot.guilds.get(data.guild_id), data.emoji);
-		reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === bot.user.id);
-	}
+    if (!reaction) {
+        const emoji = new Discord.Emoji(
+            bot.guilds.get(data.guild_id),
+            data.emoji
+        );
+        reaction = new Discord.MessageReaction(
+            message,
+            emoji,
+            1,
+            data.user_id === bot.user.id
+        );
+    }
 
-	bot.emit(events[event.t], reaction, user);
+    bot.emit(events[event.t], reaction, user);
 });
 
-bot.on('messageReactionAdd', (reaction, user) => {
+bot.on("messageReactionAdd", (reaction, user) => {
     if (reaction.emoji.name === "👏" && reaction.message.embeds.length != 0) {
         bot.channels
-                .get("509566135713398796")
-                .fetchMessages({ limit: 100 })
-                .then(messages => {
-                    messages = messages.filter(
-                        m => m.author.id === "377315020368773121"
-                    );
-                    messages.forEach(msg => {
-                        msg.embeds.forEach(embed => {
-                            if (embed.url == reaction.message.embeds[0].url) {
-                                return
-                            }
-                        });
+            .get("509566135713398796")
+            .fetchMessages({ limit: 100 })
+            .then(messages => {
+                messages = messages.filter(
+                    m => m.author.id === "377315020368773121"
+                );
+                var send = true;
+                messages.forEach(msg => {
+                    msg.embeds.forEach(embed => {
+                        if (embed.url == reaction.message.embeds[0].url) {
+                            send = false
+                        }
                     });
+                });
+                if (send) {
                     reaction.message.embeds[0].footer = {text: user.username + " shared this meme"};
                     bot.channels.get("509566135713398796").send({embed: reaction.message.embeds[0]})
-                });
+                }
+            });
     }
 });
 
-bot.on('messageReactionRemove', (reaction, user) => {
-	console.log(`${user.username} removed their "${reaction.emoji.name}" reaction.`);
+bot.on("messageReactionRemove", (reaction, user) => {
+    console.log(
+        `${user.username} removed their "${reaction.emoji.name}" reaction.`
+    );
 });
-
 
 bot.on("disconnect", console.log);
 
-bot.login(process.env.BOT_TOKEN);
+bot.login("Mzc3MzE1MDIwMzY4NzczMTIx.XZ_iDg.TnuRxZNaGGUUrjxyvMVHyizdqP4");
