@@ -201,8 +201,23 @@ bot.on('raw', async event => {
 
 bot.on('messageReactionAdd', (reaction, user) => {
     if (reaction.emoji.name === "👏" && reaction.message.embeds.length != 0) {
-        reaction.message.embeds[0].footer = {text: user.username + " shared this meme"};
-        bot.channels.get("509566135713398796").send({embed: reaction.message.embeds[0]})
+        bot.channels
+                .get("509569913543852033")
+                .fetchMessages({ limit: 100 })
+                .then(messages => {
+                    messages = messages.filter(
+                        m => m.author.id === "377315020368773121"
+                    );
+                    messages.forEach(msg => {
+                        msg.embeds.forEach(embed => {
+                            if (embed.url == reaction.message.embeds[0].url) {
+                                return
+                            }
+                        });
+                    });
+                    reaction.message.embeds[0].footer = {text: user.username + " shared this meme"};
+                    bot.channels.get("509566135713398796").send({embed: reaction.message.embeds[0]})
+                });
     }
 });
 
