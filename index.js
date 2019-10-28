@@ -81,7 +81,8 @@ function postMeme() {
                     }
 
                     var mediaUrl;
-                    if (json_obj.data.children[index].data.media != null) {
+                    if (json_obj.data.children[index].data.media != null && json_obj.data.children[index].data.media.oembed
+                        .thumbnail_url != null) {
                         mediaUrl =
                             json_obj.data.children[index].data.media.oembed
                                 .thumbnail_url;
@@ -244,5 +245,5 @@ bot.on("messageReactionRemove", (reaction, user) => {
 });
 
 bot.on("disconnect", console.log);
-
-bot.login("Mzc3MzE1MDIwMzY4NzczMTIx.XZ_iDg.TnuRxZNaGGUUrjxyvMVHyizdqP4");
+var token = require("./Discord_Token.js")
+bot.login(token);
