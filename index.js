@@ -46,12 +46,22 @@ bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
     bot.user.setActivity("f in chat boys");
     var j = schedule.scheduleJob("0,30 * * * *", postMeme);
+
+    postMissing();
 });
 
-function postMeme() {
+async function postMissing() {
+    if (process.argv.length > 2) {
+        for (let index = 0; index < process.argv[2]; index++) {
+            await postMeme();
+        }
+    }
+}
+
+async function postMeme() {
     posts = [];
 
-    axios
+    await axios
         .get("https://www.reddit.com/r/dankmemes/hot.json")
         .then(function(response) {
             var json_obj = response.data;
@@ -243,6 +253,10 @@ bot.on("messageReactionRemove", (reaction, user) => {
     );
 });
 
-bot.on("disconnect", console.log);
+bot.on("messageDelete", message => {
+  bot.channels.get("628970565042044938").send(`A message saying "${message.cleanContent}" has been deleted at ${new Date()}`)
+});
 
-bot.login(process.env.BOT_TOKEN);
+bot.on("disconnect", console.log);
+var token = require("./Discord_Token.js");
+bot.login(token);
