@@ -223,7 +223,7 @@ bot.on("raw", async event => {
 });
 
 bot.on("messageReactionAdd", (reaction, user) => {
-    if (reaction.emoji.name === "👏" && reaction.message.embeds.length != 0) {
+    if ((reaction.emoji.name === 'upvote' || reaction.emoji.name === "👏") && reaction.message.embeds.length != 0) {
         bot.channels
             .get("509566135713398796")
             .fetchMessages({ limit: 100 })
