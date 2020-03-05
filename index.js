@@ -63,7 +63,7 @@ async function postMeme() {
 
     await axios
         .get("https://www.reddit.com/r/dankmemes/hot.json")
-        .then(function(response) {
+        .then(function (response) {
             var json_obj = response.data;
             var index = 0;
             bot.channels
@@ -84,7 +84,7 @@ async function postMeme() {
                             json_obj.data.children[index].data.stickied) ||
                         posts.includes(
                             "https://www.reddit.com" +
-                                json_obj.data.children[index].data.permalink
+                            json_obj.data.children[index].data.permalink
                         )
                     ) {
                         index++;
@@ -98,6 +98,7 @@ async function postMeme() {
                     } else {
                         mediaUrl = json_obj.data.children[index].data.url;
                     }
+                    console.log(mediaUrl);
                     bot.channels.get("509569913543852033").send({
                         embed: {
                             title: json_obj.data.children[index].data.title,
@@ -107,7 +108,7 @@ async function postMeme() {
                             color: 16728368,
                             timestamp: new Date(
                                 json_obj.data.children[index].data.created_utc *
-                                    1000
+                                1000
                             ).toISOString(),
                             footer: {},
                             image: {
@@ -124,7 +125,7 @@ async function postMeme() {
                 })
                 .catch(console.error);
         })
-        .catch(function(error) {
+        .catch(function (error) {
             bot.channels
                 .get("509569913543852033")
                 .send("Error connecting to reddit: " + error);
@@ -162,14 +163,14 @@ bot.on("message", message => {
                 );
             } else {
                 var term = msg.substring(8, msg.length);
-                ud.term(term, function(error, entries, tags, sounds) {
+                ud.term(term, function (error, entries, tags, sounds) {
                     if (error) {
                         message.channel.send("Could not find term: " + term);
                     } else {
                         message.channel.send(
                             entries[0].word +
-                                ": " +
-                                entries[0].definition.replace(/[\[\]']+/g, "")
+                            ": " +
+                            entries[0].definition.replace(/[\[\]']+/g, "")
                         );
                         message.channel.send(
                             entries[0].example.replace(/[\[\]']+/g, "")
@@ -201,6 +202,7 @@ bot.on("raw", async event => {
     if (channel.messages.has(data.message_id)) return;
 
     const message = await channel.fetchMessage(data.message_id);
+
     const emojiKey = data.emoji.id
         ? `${data.emoji.name}:${data.emoji.id}`
         : data.emoji.name;
@@ -218,12 +220,12 @@ bot.on("raw", async event => {
             data.user_id === bot.user.id
         );
     }
-
-    bot.emit(events[event.t], reaction, user);
+    bot.emit(events[event.t], reaction, user, message.guild.id);
 });
 
-bot.on("messageReactionAdd", (reaction, user) => {
-    if ((reaction.emoji.name === 'upvote' || reaction.emoji.name === "👏") && reaction.message.embeds.length != 0) {
+bot.on("messageReactionAdd", (reaction, user, guild_id) => {
+    console.log("message: " + guild_id);
+    if ((reaction.emoji.name === 'upvote' || reaction.emoji.name === "👏") && reaction.message.embeds.length != 0 && reaction.message.author.id === "377315020368773121") {
         bot.channels
             .get("509566135713398796")
             .fetchMessages({ limit: 100 })
@@ -239,22 +241,20 @@ bot.on("messageReactionAdd", (reaction, user) => {
                         }
                     });
                 });
+                
                 if (send) {
-                    reaction.message.embeds[0].footer = {text: user.username + " shared this meme"};
-                    bot.channels.get("509566135713398796").send({embed: reaction.message.embeds[0]})
+                    let guild = bot.guilds.get("509566135713398794");
+                    let member = guild.member(user);
+                    reaction.message.embeds[0].footer = { text: member.displayName + " shared this meme" };
+                    bot.channels.get("509566135713398796").send({ embed: reaction.message.embeds[0] })
                 }
             });
     }
 });
 
-bot.on("messageReactionRemove", (reaction, user) => {
-    console.log(
-        `${user.username} removed their "${reaction.emoji.name}" reaction.`
-    );
-});
-
 bot.on("messageDelete", message => {
-  bot.channels.get("628970565042044938").send(`A message saying "${message.cleanContent}" has been deleted at ${new Date()}`)
+    bot.channels.get("628970565042044938").send(message.author.username)
+    bot.channels.get("628970565042044938").send("Content: " + message.content)
 });
 
 bot.on("disconnect", console.log);
