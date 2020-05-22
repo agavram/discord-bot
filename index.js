@@ -44,7 +44,7 @@ var lastDate = moment({
 bot.once("ready", () => {
     console.log(lastDate.toISOString());
     console.log(`Logged in as ${bot.user.tag}`);
-    bot.user.setActivity("f in chat boys");
+    // bot.user.setActivity("");
     var j = schedule.scheduleJob("0,30 * * * *", postMeme);
 
     postMissing();
@@ -85,7 +85,7 @@ async function postMeme() {
                         posts.includes(
                             "https://www.reddit.com" +
                             json_obj.data.children[index].data.permalink
-                        )
+                        ) || json_obj.data.children[index].data.author === "idea4granted"
                     ) {
                         index++;
                     }
