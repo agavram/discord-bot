@@ -42,7 +42,7 @@ async function postMeme() {
             console.log(error);
         });
 
-    json_obj = response.json_obj;
+    json_obj = json_obj.data;
     let index = 0;
     // Fetches 100 messages from the dank memes channel
     bot.channels
