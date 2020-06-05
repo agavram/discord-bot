@@ -1,137 +1,136 @@
-const phonetics = {
-    A: "Alpha",
-    B: "Bravo",
-    C: "Charlie",
-    D: "Delta",
-    E: "Echo",
-    F: "Foxtrot",
-    G: "Golf",
-    H: "Hotel",
-    I: "India",
-    J: "Juliet",
-    K: "Kilo",
-    L: "Lima",
-    M: "Mike",
-    N: "November",
-    O: "Oscar",
-    P: "Papa",
-    Q: "Quebec",
-    R: "Romeo",
-    S: "Sierra",
-    T: "Tango",
-    U: "Uniform",
-    V: "Victor",
-    W: "Whiskey",
-    X: "X-ray",
-    Y: "Yankee",
-    Z: "Zulu"
-};
 const Discord = require("discord.js");
 const bot = new Discord.Client();
-
-const moment = require("moment");
 const schedule = require("node-schedule");
 const axios = require("axios");
-
-var date = moment();
-
-var lastDate = moment({
-    day: date.date() + 2,
-    month: date.month(),
-    year: date.year()
-});
+const phonetics = require('./phonetic-alphabet');
 
 bot.once("ready", () => {
-    console.log(lastDate.toISOString());
     console.log(`Logged in as ${bot.user.tag}`);
-    bot.user.setActivity("f in chat boys");
-    var j = schedule.scheduleJob("0,30 * * * *", postMeme);
+    // bot.user.setActivity("");
+    // Every half hour post a meme
+    let j = schedule.scheduleJob("0,30 * * * *", postMeme);
+
+    postArgument();
 });
 
-function postMeme() {
-    posts = [];
 
-    axios
+/**
+ * Pass in a number as an argument
+ * node index.js 3
+ * will post 3 memes immediately when the bot goes online
+ */
+async function postArgument() {
+    if (process.argv.length > 2) {
+        for (let index = 0; index < process.argv[2]; index++) {
+            await postMeme();
+        }
+    }
+}
+
+/**
+ * Fetch a meme from r/dankmemes and post it
+ */
+async function postMeme() {
+    let posts = [];
+
+    let json_obj = await axios
         .get("https://www.reddit.com/r/dankmemes/hot.json")
-        .then(function(response) {
-            var json_obj = response.data;
-            var index = 0;
+        .catch(function (error) {
             bot.channels
                 .get("509569913543852033")
-                .fetchMessages({ limit: 100 })
-                .then(messages => {
-                    messages = messages.filter(
-                        m => m.author.id === "377315020368773121"
-                    );
-                    messages.forEach(msg => {
-                        msg.embeds.forEach(embed => {
-                            posts.push(embed.url);
-                        });
-                    });
-
-                    while (
-                        (json_obj.data.children.length != index &&
-                            json_obj.data.children[index].data.stickied) ||
-                        posts.includes(
-                            "https://www.reddit.com" +
-                                json_obj.data.children[index].data.permalink
-                        )
-                    ) {
-                        index++;
-                    }
-
-                    var mediaUrl;
-                    if (json_obj.data.children[index].data.media != null && json_obj.data.children[index].data.media.oembed
-                        .thumbnail_url != null) {
-                        mediaUrl =
-                            json_obj.data.children[index].data.media.oembed
-                                .thumbnail_url;
-                    } else {
-                        mediaUrl = json_obj.data.children[index].data.url;
-                    }
-                    bot.channels.get("509569913543852033").send({
-                        embed: {
-                            title: json_obj.data.children[index].data.title,
-                            url:
-                                "https://www.reddit.com" +
-                                json_obj.data.children[index].data.permalink,
-                            color: 16728368,
-                            timestamp: new Date(
-                                json_obj.data.children[index].data.created_utc *
-                                    1000
-                            ).toISOString(),
-                            footer: {},
-                            image: {
-                                url: mediaUrl
-                            },
-                            author: {
-                                name: json_obj.data.children[index].data.author,
-                                url:
-                                    "https://www.reddit.com/u/" +
-                                    json_obj.data.children[index].data.author
-                            }
-                        }
-                    });
-                })
-                .catch(console.error);
-        })
-        .catch(function(error) {
-            bot.channels
-                .get("509569913543852033")
-                .send("Error connecting to reddit: " + error);
+                .send("Reddit is down with status code: " + error);
             console.log(error);
         });
+
+    json_obj = json_obj.data;
+    let index = 0;
+    // Fetches 100 messages from the dank memes channel
+    bot.channels
+        .get("509569913543852033")
+        .fetchMessages({ limit: 100 })
+        .then(messages => {
+            messages = messages.filter(
+                m => m.author.id === "377315020368773121"
+            );
+            messages.forEach(msg => {
+                msg.embeds.forEach(embed => {
+                    posts.push(embed.url);
+                });
+            });
+
+            // If the post is sticked (mod post), already posted (check the past 100 messages), or is from idea4granted, then skip it
+            while (json_obj.data.children[index].data.stickied ||
+                posts.includes("https://www.reddit.com" + json_obj.data.children[index].data.permalink) ||
+                json_obj.data.children[index].data.author === "idea4granted"
+            ) {
+                index++;
+            }
+
+            let mediaUrl;
+            // Attempt to get an image
+            if (json_obj.data.children[index].data.media != null) {
+                mediaUrl =
+                    json_obj.data.children[index].data.media.oembed
+                        .thumbnail_url;
+                // If no image is available get a gif
+            } else {
+                mediaUrl = json_obj.data.children[index].data.url;
+            }
+
+            // Generate the embed to post to discord
+            let embed = {
+                title: json_obj.data.children[index].data.title,
+                url:
+                    "https://www.reddit.com" +
+                    json_obj.data.children[index].data.permalink,
+                color: 16728368,
+                timestamp: new Date(
+                    json_obj.data.children[index].data.created_utc *
+                    1000
+                ).toISOString(),
+
+                author: {
+                    name: json_obj.data.children[index].data.author,
+                    url:
+                        "https://www.reddit.com/u/" +
+                        json_obj.data.children[index].data.author
+                }
+            };
+
+            // Check if post is video from imgur. gifv is properietary so change the url to mp4
+            if (mediaUrl.includes('i.imgur.com') && mediaUrl.substring(mediaUrl.length - 4) === 'gifv') {
+                mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + "mp4";
+                embed.description = mediaUrl;
+            } else {
+                embed.image = {
+                    url: mediaUrl
+                };
+            }
+
+            bot.channels.get("509569913543852033").send({
+                embed
+            });
+
+            // Only send video if it was an mp4
+            if (mediaUrl.substring(mediaUrl.length - 3) === 'mp4') {
+                bot.channels.get('509569913543852033').send({
+                    files: [mediaUrl]
+                });
+            }
+
+        })
+        .catch(console.error);
 }
 
 bot.on("message", message => {
     if (!message.author.bot) {
-        var msg = message.content;
-        msg = msg.toLowerCase();
+        let msg = message.content; msg = msg.toLowerCase();
 
         if (msg.substring(0, 9) == "!phonetic") {
-            var input = msg.substring(10, msg.length);
-            var output = "";
-            for (var i = 0; i < input.length; i++) {
+            let input = msg.substring(10, msg.length);
+            let output = "";
+
+            for (let i = 0; i < input.length; i++) {
                 if (phonetics[input.charAt(i).toUpperCase()] !== undefined) {
                     output += phonetics[input.charAt(i).toUpperCase()] + " ";
                 } else if (input.charAt(i) == " ") {
@@ -142,32 +141,8 @@ bot.on("message", message => {
                         input.charAt(i);
                 }
             }
-            message.channel.send(output);
-        }
 
-        if (msg.substring(0, 7) == "!define") {
-            msg.replace(/\s+/g, " ").trim();
-            if (msg.length == 7) {
-                message.channel.send(
-                    "Use !define {term} to get the definition of a word from urban dictionary."
-                );
-            } else {
-                var term = msg.substring(8, msg.length);
-                ud.term(term, function(error, entries, tags, sounds) {
-                    if (error) {
-                        message.channel.send("Could not find term: " + term);
-                    } else {
-                        message.channel.send(
-                            entries[0].word +
-                                ": " +
-                                entries[0].definition.replace(/[\[\]']+/g, "")
-                        );
-                        message.channel.send(
-                            entries[0].example.replace(/[\[\]']+/g, "")
-                        );
-                    }
-                });
-            }
+            message.channel.send(output);
         }
     }
 });
@@ -192,6 +167,7 @@ bot.on("raw", async event => {
     if (channel.messages.has(data.message_id)) return;
 
     const message = await channel.fetchMessage(data.message_id);
+
     const emojiKey = data.emoji.id
         ? `${data.emoji.name}:${data.emoji.id}`
         : data.emoji.name;
@@ -209,41 +185,50 @@ bot.on("raw", async event => {
             data.user_id === bot.user.id
         );
     }
-
-    bot.emit(events[event.t], reaction, user);
+    bot.emit(events[event.t], reaction, user, message.guild.id);
 });
 
-bot.on("messageReactionAdd", (reaction, user) => {
-    if (reaction.emoji.name === "👏" && reaction.message.embeds.length != 0) {
+bot.on("messageReactionAdd", (reaction, user, guild_id) => {
+    if ((reaction.emoji.name === 'upvote' || reaction.emoji.name === "👏") && reaction.message.embeds.length != 0 && reaction.message.author.id === "377315020368773121") {
         bot.channels
             .get("509566135713398796")
             .fetchMessages({ limit: 100 })
             .then(messages => {
+                // Filter out mesages from the bot
                 messages = messages.filter(
                     m => m.author.id === "377315020368773121"
                 );
-                var send = true;
+
+                // Check if meme was already posted
                 messages.forEach(msg => {
                     msg.embeds.forEach(embed => {
                         if (embed.url == reaction.message.embeds[0].url) {
-                            send = false
+                            return;
                         }
                     });
                 });
-                if (send) {
-                    reaction.message.embeds[0].footer = {text: user.username + " shared this meme"};
-                    bot.channels.get("509566135713398796").send({embed: reaction.message.embeds[0]})
+
+                let guild = bot.guilds.get("509566135713398794");
+                // State who shared the meme
+                reaction.message.embeds[0].footer = { text: guild.member(user).displayName + " shared this meme" };
+
+                // Finally send the meme
+                bot.channels.get("509566135713398796").send({ embed: reaction.message.embeds[0] });
+
+                // Check if video was included in description. If so then send that too
+                if (reaction.message.embeds[0].description != null && reaction.message.embeds[0].description != '') {
+                    bot.channels.get('509566135713398796').send({
+                        files: [reaction.message.embeds[0].description]
+                    });
                 }
             });
     }
 });
 
-bot.on("messageReactionRemove", (reaction, user) => {
-    console.log(
-        `${user.username} removed their "${reaction.emoji.name}" reaction.`
-    );
+bot.on("messageDelete", message => {
+    bot.channels.get("628970565042044938").send(message.author.username);
+    bot.channels.get("628970565042044938").send("Content: " + message.content);
 });
 
 bot.on("disconnect", console.log);
-var token = require("./Discord_Token.js")
-bot.login(token);
+bot.login(require("./discord-token.js"));
