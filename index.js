@@ -105,7 +105,7 @@ async function postMeme() {
             };
 
             // Check if post is video from imgur. gifv is properietary so change the url to mp4
-            if (mediaUrl.includes('i.imgur.com') && mediaUrl.substring(mediaUrl.length - 4) === 'gifv') {
+            if (mediaUrl.includes('imgur.com') && mediaUrl.substring(mediaUrl.length - 4) === 'gifv') {
                 mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + "mp4";
                 embed.description = mediaUrl;
             } else {
