@@ -6,8 +6,8 @@ const phonetics = require('./phonetic-alphabet');
 const Sherlock = require('sherlockjs');
 const moment = require("moment");
 
-const BOT_ID = "657393851614494721";
-// 377315020368773121
+const BOT_ID = "377315020368773121";
+// 657393851614494721
 const GENERAL_ID = "509566135713398796";
 const DANKMEMES_ID = "509569913543852033";
 
