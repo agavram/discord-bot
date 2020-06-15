@@ -3,6 +3,13 @@ const bot = new Discord.Client();
 const schedule = require("node-schedule");
 const axios = require("axios");
 const phonetics = require('./phonetic-alphabet');
+const Sherlock = require('sherlockjs');
+const moment = require("moment");
+
+const BOT_ID = "657393851614494721";
+// 377315020368773121
+const GENERAL_ID = "509566135713398796";
+const DANKMEMES_ID = "509569913543852033";
 
 bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
@@ -37,7 +44,7 @@ async function postMeme() {
         .get("https://www.reddit.com/r/dankmemes/hot.json")
         .catch(function (error) {
             bot.channels
-                .get("509569913543852033")
+                .get(DANKMEMES_ID)
                 .send("Reddit is down with status code: " + error);
             console.log(error);
         });
@@ -46,11 +53,11 @@ async function postMeme() {
     let index = 0;
     // Fetches 100 messages from the dank memes channel
     bot.channels
-        .get("509569913543852033")
+        .get(DANKMEMES_ID)
         .fetchMessages({ limit: 100 })
         .then(messages => {
             messages = messages.filter(
-                m => m.author.id === "377315020368773121"
+                m => m.author.id === BOT_ID
             );
             messages.forEach(msg => {
                 msg.embeds.forEach(embed => {
@@ -107,13 +114,13 @@ async function postMeme() {
                 };
             }
 
-            bot.channels.get("509569913543852033").send({
+            bot.channels.get(DANKMEMES_ID).send({
                 embed
             });
 
             // Only send video if it was an mp4
             if (mediaUrl.substring(mediaUrl.length - 3) === 'mp4') {
-                bot.channels.get('509569913543852033').send({
+                bot.channels.get(DANKMEMES_ID).send({
                     files: [mediaUrl]
                 });
             }
@@ -126,7 +133,7 @@ bot.on("message", message => {
     if (!message.author.bot) {
         let msg = message.content; msg = msg.toLowerCase();
 
-        if (msg.substring(0, 9) == "!phonetic") {
+        if (msg.startsWith("!phonetic")) {
             let input = msg.substring(10, msg.length);
             let output = "";
 
@@ -143,6 +150,22 @@ bot.on("message", message => {
             }
 
             message.channel.send(output);
+        } else if (msg.startsWith("!event")) {
+            msg = msg.substring(msg.indexOf(' ') + 1);
+            const parsed = Sherlock.parse(msg);
+
+            // Generate the embed to post to discord
+            let embed = {
+                title: parsed.eventTitle,
+                description: moment(parsed.startDate).calendar(),
+                fields: []
+            };
+
+            message.channel.send({
+                embed
+            }).then(sent => {
+                sent.react("✅")
+            })
         }
     }
 });
@@ -151,52 +174,51 @@ bot.on("error", info => {
     console.log("Error event:\n" + info.message);
 });
 
-const events = {
-    MESSAGE_REACTION_ADD: "messageReactionAdd",
-    MESSAGE_REACTION_REMOVE: "messageReactionRemove"
-};
-
-bot.on("raw", async event => {
-    if (!events.hasOwnProperty(event.t)) return;
-
-    const { d: data } = event;
-    const user = bot.users.get(data.user_id);
-    const channel =
-        bot.channels.get(data.channel_id) || (await user.createDM());
-
-    if (channel.messages.has(data.message_id)) return;
-
-    const message = await channel.fetchMessage(data.message_id);
-
-    const emojiKey = data.emoji.id
-        ? `${data.emoji.name}:${data.emoji.id}`
-        : data.emoji.name;
-    let reaction = message.reactions.get(emojiKey);
-
-    if (!reaction) {
-        const emoji = new Discord.Emoji(
-            bot.guilds.get(data.guild_id),
-            data.emoji
-        );
-        reaction = new Discord.MessageReaction(
-            message,
-            emoji,
-            1,
-            data.user_id === bot.user.id
-        );
-    }
-    bot.emit(events[event.t], reaction, user, message.guild.id);
+bot.on('raw', packet => {
+    // We don't want this to run on unrelated packets
+    if (!['MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE'].includes(packet.t)) return;
+    // Grab the channel to check the message from
+    const channel = bot.channels.get(packet.d.channel_id);
+    // There's no need to emit if the message is cached, because the event will fire anyway for that
+    if (channel.messages.has(packet.d.message_id)) return;
+    // Since we have confirmed the message is not cached, let's fetch it
+    channel.fetchMessage(packet.d.message_id).then(message => {
+        // Emojis can have identifiers of name:id format, so we have to account for that case as well
+        const emoji = packet.d.emoji.id ? `${packet.d.emoji.name}:${packet.d.emoji.id}` : packet.d.emoji.name;
+        // This gives us the reaction we need to emit the event properly, in top of the message object
+        const reaction = message.reactions.get(emoji);
+        // Adds the currently reacting user to the reaction's users collection.
+        if (reaction) reaction.users.set(packet.d.user_id, bot.users.get(packet.d.user_id));
+        // Check which type of event it is before emitting
+        if (packet.t === 'MESSAGE_REACTION_ADD') {
+            bot.emit('messageReactionAdd', reaction, bot.users.get(packet.d.user_id));
+        }
+        if (packet.t === 'MESSAGE_REACTION_REMOVE') {
+            bot.emit('messageReactionRemove', reaction, bot.users.get(packet.d.user_id));
+        }
+    });
 });
 
-bot.on("messageReactionAdd", (reaction, user, guild_id) => {
-    if ((reaction.emoji.name === 'upvote' || reaction.emoji.name === "👏") && reaction.message.embeds.length != 0 && reaction.message.author.id === "377315020368773121") {
+bot.on('messageReactionRemove', (reaction, user) => {
+    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != DANKMEMES_ID) {
+        const embed = reaction.message.embeds[0];
+        embed.fields = embed.fields.filter(field => field.value != bot.guilds.get(reaction.message.guild.id).member(user).displayName)
+        reaction.message.edit(new Discord.RichEmbed(embed));
+    }
+});
+
+bot.on("messageReactionAdd", (reaction, user) => {
+    if (user.bot)
+        return
+    
+    if ((reaction.emoji.name === 'upvote') && reaction.message.embeds.length != 0 && reaction.message.author.id === BOT_ID) {
         bot.channels
-            .get("509566135713398796")
+            .get(GENERAL_ID)
             .fetchMessages({ limit: 100 })
             .then(messages => {
                 // Filter out mesages from the bot
                 messages = messages.filter(
-                    m => m.author.id === "377315020368773121"
+                    m => m.author.id === BOT_ID
                 );
 
                 // Check if meme was already posted
@@ -208,20 +230,31 @@ bot.on("messageReactionAdd", (reaction, user, guild_id) => {
                     });
                 });
 
-                let guild = bot.guilds.get("509566135713398794");
+                let guild = bot.guilds.get(reaction.message.guild.id);
                 // State who shared the meme
                 reaction.message.embeds[0].footer = { text: guild.member(user).displayName + " shared this meme" };
 
                 // Finally send the meme
-                bot.channels.get("509566135713398796").send({ embed: reaction.message.embeds[0] });
+                bot.channels.get(GENERAL_ID).send({ embed: reaction.message.embeds[0] });
 
                 // Check if video was included in description. If so then send that too
                 if (reaction.message.embeds[0].description != null && reaction.message.embeds[0].description != '') {
-                    bot.channels.get('509566135713398796').send({
+                    bot.channels.get(GENERAL_ID).send({
                         files: [reaction.message.embeds[0].description]
                     });
                 }
             });
+    }
+
+    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != DANKMEMES_ID) {
+        const embed =  reaction.message.embeds[0];
+        embed.fields.push(
+            {
+                name: "Attendee",
+                value: bot.guilds.get(reaction.message.guild.id).member(user).displayName,
+            },
+        )
+        reaction.message.edit(new Discord.RichEmbed(embed));
     }
 });
 
@@ -231,4 +264,4 @@ bot.on("messageDelete", message => {
 });
 
 bot.on("disconnect", console.log);
-bot.login(require("./discord-token.js"));
+bot.login(require("./Discord_Token.js"));
