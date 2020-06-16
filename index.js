@@ -4,21 +4,44 @@ const schedule = require("node-schedule");
 const axios = require("axios");
 const phonetics = require('./phonetic-alphabet');
 const Sherlock = require('sherlockjs');
-const moment = require("moment");
+const fs = require('fs');
 
 const BOT_ID = "377315020368773121";
 // 657393851614494721
 const GENERAL_ID = "509566135713398796";
 const DANKMEMES_ID = "509569913543852033";
+const LOG_CHANNEL = "628970565042044938";
+
+let events;
 
 bot.once("ready", () => {
     console.log(`Logged in as ${bot.user.tag}`);
+    initializeEvents();
     // bot.user.setActivity("");
     // Every half hour post a meme
     let j = schedule.scheduleJob("0,30 * * * *", postMeme);
 
     postArgument();
 });
+
+function initializeEvents() {
+    events = JSON.parse(fs.readFileSync('./events.json'));
+    Object.keys(events).forEach(function (key) {
+        scheduleEventJob(key);
+    });
+}
+
+function scheduleEventJob(key) {
+    schedule.scheduleJob(key, function () {
+        const attendees = events[key];
+        for (let index = 1; index < attendees.length; index++) {
+            const attendee = attendees[index];
+            bot.users.get(attendee).send(attendees[0] + " is happening right now");
+        }
+        delete events[key];
+        updateJSON(events);
+    });
+}
 
 
 /**
@@ -157,15 +180,18 @@ bot.on("message", message => {
             // Generate the embed to post to discord
             let embed = {
                 title: parsed.eventTitle,
-                description: moment(parsed.startDate).calendar(),
-                fields: []
+                fields: [],
+                timestamp: parsed.startDate,
             };
 
             message.channel.send({
                 embed
             }).then(sent => {
-                sent.react("✅")
-            })
+                sent.react("✅");
+                events[sent.embeds[0].timestamp] = [parsed.eventTitle];
+                scheduleEventJob(sent.embeds[0].timestamp);
+                updateJSON(events);
+            });
         }
     }
 });
@@ -202,15 +228,30 @@ bot.on('raw', packet => {
 bot.on('messageReactionRemove', (reaction, user) => {
     if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != DANKMEMES_ID) {
         const embed = reaction.message.embeds[0];
-        embed.fields = embed.fields.filter(field => field.value != bot.guilds.get(reaction.message.guild.id).member(user).displayName)
-        reaction.message.edit(new Discord.RichEmbed(embed));
+        embed.fields = embed.fields.filter(field => field.value != bot.guilds.get(reaction.message.guild.id).member(user).displayName);
+        reaction.message.edit(new Discord.RichEmbed(embed)).then(_ => {
+            events[embed.timestamp] = removeItemOnce(events[embed.timestamp], user.id);
+            updateJSON(events);
+        });
     }
 });
 
+function updateJSON(events) {
+    fs.writeFileSync("./events.json", JSON.stringify(events));
+}
+
+function removeItemOnce(arr, value) {
+    var index = arr.indexOf(value);
+    if (index > -1) {
+        arr.splice(index, 1);
+    }
+    return arr;
+}
+
 bot.on("messageReactionAdd", (reaction, user) => {
     if (user.bot)
-        return
-    
+        return;
+
     if ((reaction.emoji.name === 'upvote') && reaction.message.embeds.length != 0 && reaction.message.author.id === BOT_ID) {
         bot.channels
             .get(GENERAL_ID)
@@ -247,20 +288,23 @@ bot.on("messageReactionAdd", (reaction, user) => {
     }
 
     if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != DANKMEMES_ID) {
-        const embed =  reaction.message.embeds[0];
+        const embed = reaction.message.embeds[0];
         embed.fields.push(
             {
                 name: "Attendee",
                 value: bot.guilds.get(reaction.message.guild.id).member(user).displayName,
             },
-        )
-        reaction.message.edit(new Discord.RichEmbed(embed));
+        );
+        reaction.message.edit(new Discord.RichEmbed(embed)).then(_ => {
+            events[embed.timestamp].push(user.id);
+            updateJSON(events);
+        });
     }
 });
 
 bot.on("messageDelete", message => {
-    bot.channels.get("628970565042044938").send(message.author.username);
-    bot.channels.get("628970565042044938").send("Content: " + message.content);
+    bot.channels.get(LOG_CHANNEL).send(message.author.username);
+    bot.channels.get(LOG_CHANNEL).send("Content: " + message.content);
 });
 
 bot.on("disconnect", console.log);
