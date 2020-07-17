@@ -2,15 +2,16 @@ const Discord = require("discord.js");
 const bot = new Discord.Client();
 const schedule = require("node-schedule");
 const axios = require("axios");
-const phonetics = require('./phonetic-alphabet');
+const phonetics = require('helpers/phonetic-alphabet');
 const Sherlock = require('sherlockjs');
 const fs = require('fs');
 
 const BOT_ID = "377315020368773121";
-// 657393851614494721
-const GENERAL_ID = "509566135713398796";
-const DANKMEMES_ID = "509569913543852033";
-const LOG_CHANNEL = "628970565042044938";
+const CHANNEL_GENERAL = "509566135713398796";
+const CHANNEL_MEMES = "509569913543852033";
+const CHANNEL_LOGGING = "628970565042044938";
+
+require('dotenv').config()
 
 let events;
 
@@ -25,22 +26,27 @@ bot.once("ready", () => {
 });
 
 function initializeEvents() {
-    events = JSON.parse(fs.readFileSync('./events.json'));
+    events = JSON.parse(fs.readFileSync('.databases/events.json'));
     Object.keys(events).forEach(function (key) {
         scheduleEventJob(key);
     });
 }
 
 function scheduleEventJob(key) {
-    schedule.scheduleJob(key, function () {
-        const attendees = events[key];
-        for (let index = 1; index < attendees.length; index++) {
-            const attendee = attendees[index];
-            bot.users.get(attendee).send(attendees[0] + " is happening right now");
-        }
+    if (Date.parse(key) < Date.now()) {
         delete events[key];
         updateJSON(events);
-    });
+    } else {
+        schedule.scheduleJob(key, function () {
+            const attendees = events[key];
+            for (let index = 1; index < attendees.length; index++) {
+                const attendee = attendees[index];
+                bot.users.get(attendee).send(attendees[0] + " is happening right now");
+            }
+            delete events[key];
+            updateJSON(events);
+        });
+    }
 }
 
 
@@ -51,7 +57,8 @@ function scheduleEventJob(key) {
  */
 async function postArgument() {
     if (process.argv.length > 2) {
-        for (let index = 0; index < process.argv[2]; index++) {
+        // parseInt(*, 10) for base 10
+        for (let index = 0; index < parseInt(process.argv[2], 10); index++) {
             await postMeme();
         }
     }
@@ -61,102 +68,112 @@ async function postArgument() {
  * Fetch a meme from r/dankmemes and post it
  */
 async function postMeme() {
-    let posts = [];
-
-    let json_obj = await axios
+    let res = await axios
         .get("https://www.reddit.com/r/dankmemes/hot.json")
         .catch(function (error) {
             bot.channels
-                .get(DANKMEMES_ID)
+                .get(CHANNEL_MEMES)
                 .send("Reddit is down with status code: " + error);
             console.log(error);
         });
 
-    json_obj = json_obj.data;
-    let index = 0;
+    let json_obj = res.data;
+
     // Fetches 100 messages from the dank memes channel
     bot.channels
-        .get(DANKMEMES_ID)
+        .get(CHANNEL_MEMES)
         .fetchMessages({ limit: 100 })
         .then(messages => {
             messages = messages.filter(
                 m => m.author.id === BOT_ID
             );
+
+            let posts = [];
             messages.forEach(msg => {
                 msg.embeds.forEach(embed => {
                     posts.push(embed.url);
                 });
             });
 
-            // If the post is sticked (mod post), already posted (check the past 100 messages), or is from idea4granted, then skip it
-            while (json_obj.data.children[index].data.stickied ||
-                posts.includes("https://www.reddit.com" + json_obj.data.children[index].data.permalink) ||
-                json_obj.data.children[index].data.author === "idea4granted"
-            ) {
-                index++;
-            }
+            for (let index = 0; index < json_obj.data.children.length; index++) {
+                const post : Reddit.Data2 = json_obj.data.children[index].data;
 
-            let mediaUrl;
-            // Attempt to get an image
-            if (json_obj.data.children[index].data.media != null) {
-                mediaUrl =
-                    json_obj.data.children[index].data.media.oembed
-                        .thumbnail_url;
-                // If no image is available get a gif
-            } else {
-                mediaUrl = json_obj.data.children[index].data.url;
-            }
-
-            // Generate the embed to post to discord
-            let embed = {
-                title: json_obj.data.children[index].data.title,
-                url:
-                    "https://www.reddit.com" +
-                    json_obj.data.children[index].data.permalink,
-                color: 16728368,
-                timestamp: new Date(
-                    json_obj.data.children[index].data.created_utc *
-                    1000
-                ).toISOString(),
-
-                author: {
-                    name: json_obj.data.children[index].data.author,
-                    url:
-                        "https://www.reddit.com/u/" +
-                        json_obj.data.children[index].data.author
+                // If the post is sticked (mod post), already posted (check the past 100 messages), or is from idea4granted, then skip it
+                while (post.stickied ||
+                    posts.includes("https://www.reddit.com" + post.permalink) ||
+                    post.author === "idea4granted"
+                ) {
+                    continue;
                 }
-            };
 
-            // Check if post is video from imgur. gifv is properietary so change the url to mp4
-            if (mediaUrl.includes('imgur.com') && mediaUrl.substring(mediaUrl.length - 4) === 'gifv') {
-                mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + "mp4";
-                embed.description = mediaUrl;
-            } else {
-                embed.image = {
-                    url: mediaUrl
+                let mediaUrl;
+                // Attempt to get an image
+                if (post.media != null) {
+                    mediaUrl =
+                        post.media.oembed
+                            .thumbnail_url;
+                    // If no image is available get a gif
+                } else {
+                    mediaUrl = post.url;
+                }
+
+                // Generate the embed to post to discord
+                let embed = {
+                    title: post.title,
+                    url:
+                        "https://www.reddit.com" +
+                        post.permalink,
+                    color: 16728368,
+                    timestamp: new Date(
+                        post.created_utc *
+                        1000
+                    ).toISOString(),
+
+                    author: {
+                        name: post.author,
+                        url:
+                            "https://www.reddit.com/u/" +
+                            post.author
+                    },
+
+                    description: {},
+
+                    image: {}
                 };
-            }
 
-            bot.channels.get(DANKMEMES_ID).send({
-                embed
-            });
+                // Check if post is video from imgur. gifv is proprietary so change the url to mp4
+                if (mediaUrl.includes('imgur.com') && mediaUrl.substring(mediaUrl.length - 4) === 'gifv') {
+                    mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + "mp4";
+                    embed.description = mediaUrl;
+                } else {
+                    embed.image = {
+                        url: mediaUrl
+                    };
+                }
 
-            // Only send video if it was an mp4
-            if (mediaUrl.substring(mediaUrl.length - 3) === 'mp4') {
-                bot.channels.get(DANKMEMES_ID).send({
-                    files: [mediaUrl]
+                bot.channels.get(CHANNEL_MEMES).send({
+                    embed
                 });
-            }
 
+                // Only send video if it was an mp4
+                if (mediaUrl.substring(mediaUrl.length - 3) === 'mp4') {
+                    bot.channels.get(CHANNEL_MEMES).send({
+                        files: [mediaUrl]
+                    });
+                }
+
+                
+            }
         })
         .catch(console.error);
 }
 
 bot.on("message", message => {
-    if (!message.author.bot) {
+    if (!message.author.bot && message.channel.type.toLowerCase() === 'text') {
+        
         let msg = message.content; msg = msg.toLowerCase();
 
-        if (msg.startsWith("!phonetic")) {
+        if (msg.startsWith("!phonetic ")) {
             let input = msg.substring(10, msg.length);
             let output = "";
 
@@ -173,7 +190,9 @@ bot.on("message", message => {
             }
 
             message.channel.send(output);
-        } else if (msg.startsWith("!event")) {
+        } 
+        
+        if (msg.startsWith("!event ")) {
             msg = msg.substring(msg.indexOf(' ') + 1);
             const parsed = Sherlock.parse(msg);
 
@@ -188,9 +207,11 @@ bot.on("message", message => {
                 embed
             }).then(sent => {
                 sent.react("✅");
-                events[sent.embeds[0].timestamp] = [parsed.eventTitle];
-                scheduleEventJob(sent.embeds[0].timestamp);
-                updateJSON(events);
+                if (parsed.startDate && new Date(parsed.startDate) > new Date()) {
+                    events[sent.embeds[0].timestamp] = [parsed.eventTitle];
+                    scheduleEventJob(sent.embeds[0].timestamp);
+                    updateJSON(events);
+                }
             });
         }
     }
@@ -226,18 +247,23 @@ bot.on('raw', packet => {
 });
 
 bot.on('messageReactionRemove', (reaction, user) => {
-    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != DANKMEMES_ID) {
+    const guild = bot.guilds.get(reaction.message.guild.id);
+
+    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != CHANNEL_MEMES) {
         const embed = reaction.message.embeds[0];
-        embed.fields = embed.fields.filter(field => field.value != bot.guilds.get(reaction.message.guild.id).member(user).displayName);
+        embed.fields = embed.fields.filter(field => field.value != guild.member(user).displayName);
+        
         reaction.message.edit(new Discord.RichEmbed(embed)).then(_ => {
-            events[embed.timestamp] = removeItemOnce(events[embed.timestamp], user.id);
-            updateJSON(events);
+            if (embed.timestamp in events) {
+                events[embed.timestamp] = removeItemOnce(events[embed.timestamp], user.id);
+                updateJSON(events);
+            }
         });
     }
 });
 
 function updateJSON(events) {
-    fs.writeFileSync("./events.json", JSON.stringify(events));
+    fs.writeFileSync("databases/events.json", JSON.stringify(events));
 }
 
 function removeItemOnce(arr, value) {
@@ -249,12 +275,14 @@ function removeItemOnce(arr, value) {
 }
 
 bot.on("messageReactionAdd", (reaction, user) => {
-    if (user.bot)
+    if (user.bot) {
         return;
+    }
 
+    const guild = bot.guilds.get(reaction.message.guild.id);
     if ((reaction.emoji.name === 'upvote') && reaction.message.embeds.length != 0 && reaction.message.author.id === BOT_ID) {
         bot.channels
-            .get(GENERAL_ID)
+            .get(CHANNEL_GENERAL)
             .fetchMessages({ limit: 100 })
             .then(messages => {
                 // Filter out mesages from the bot
@@ -263,49 +291,65 @@ bot.on("messageReactionAdd", (reaction, user) => {
                 );
 
                 // Check if meme was already posted
+                let shouldExit = false;
+                
                 messages.forEach(msg => {
                     msg.embeds.forEach(embed => {
                         if (embed.url == reaction.message.embeds[0].url) {
-                            return;
+                            shouldExit = true;
                         }
                     });
                 });
 
-                let guild = bot.guilds.get(reaction.message.guild.id);
+                if (shouldExit) {
+                    return;
+                }
+
                 // State who shared the meme
                 reaction.message.embeds[0].footer = { text: guild.member(user).displayName + " shared this meme" };
 
                 // Finally send the meme
-                bot.channels.get(GENERAL_ID).send({ embed: reaction.message.embeds[0] });
+                bot.channels.get(CHANNEL_GENERAL).send({ embed: reaction.message.embeds[0] });
 
                 // Check if video was included in description. If so then send that too
                 if (reaction.message.embeds[0].description != null && reaction.message.embeds[0].description != '') {
-                    bot.channels.get(GENERAL_ID).send({
+                    bot.channels.get(CHANNEL_GENERAL).send({
                         files: [reaction.message.embeds[0].description]
                     });
                 }
             });
     }
 
-    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != DANKMEMES_ID) {
+    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != CHANNEL_MEMES) {
         const embed = reaction.message.embeds[0];
+
+        for (let i = 0; i < embed.fields.length; i++) {
+            const field = embed.fields[i];
+            if (field.value === guild.member(user).displayName) {
+                return false;
+            }
+        }
+
         embed.fields.push(
             {
                 name: "Attendee",
-                value: bot.guilds.get(reaction.message.guild.id).member(user).displayName,
+                value: guild.member(user).displayName,
             },
         );
+
         reaction.message.edit(new Discord.RichEmbed(embed)).then(_ => {
-            events[embed.timestamp].push(user.id);
-            updateJSON(events);
+            if (embed.timestamp in events) {
+                events[embed.timestamp].push(user.id);
+                updateJSON(events);
+            }
         });
     }
 });
 
 bot.on("messageDelete", message => {
-    bot.channels.get(LOG_CHANNEL).send(message.author.username);
-    bot.channels.get(LOG_CHANNEL).send("Content: " + message.content);
+    bot.channels.get(CHANNEL_LOGGING).send(message.author.username);
+    bot.channels.get(CHANNEL_LOGGING).send("Content: " + message.content);
 });
 
 bot.on("disconnect", console.log);
-bot.login(require("./Discord_Token.js"));
+bot.login(require("./tokens/discordToken.js"));
