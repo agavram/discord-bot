@@ -19,6 +19,7 @@
     "sherlockjs": "^1.4.0"
   },
   "devDependencies": {
+    "nodemon": "^2.0.4",
     "ts-node-dev": "^1.0.0-pre.52",
     "typescript": "^3.9.7"
   }

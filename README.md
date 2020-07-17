@@ -1,2 +1,2 @@
 # Discord_Bot
-[![Build](https://api.travis-ci.com/agavram/Discord_Bot.svg?branch=master&status=passed)](https://travis-ci.com/github/agavram/Discord_Bot)
+![Node.js CI](https://github.com/agavram/Discord_Bot/workflows/Node.js%20CI/badge.svg?branch=master)
