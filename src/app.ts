@@ -1,12 +1,12 @@
 const Discord = require('discord.js');
-const bot = new Discord.Client();
+const client = new Discord.Client({ partials: ['MESSAGE', 'REACTION']});
 const schedule = require('node-schedule');
 const axios = require('axios');
 const phonetics = require('./helpers/phonetic-alphabet');
 const Sherlock = require('sherlockjs');
 const fs = require('fs');
+const Reddit = require('./interfaces/reddit');
 
-const BOT_ID = '377315020368773121';
 const CHANNEL_GENERAL = '509566135713398796';
 const CHANNEL_MEMES = '509569913543852033';
 const CHANNEL_LOGGING = '628970565042044938';
@@ -16,12 +16,12 @@ require('dotenv').config()
 
 let events;
 
-bot.once('ready', () => {
-    console.log(`Logged in as ${bot.user.tag}`);
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}`);
     initializeEvents();
-    // bot.user.setActivity('');
+
     // Every half hour post a meme
-    let j = schedule.scheduleJob('0,30 * * * *', postMeme);
+    schedule.scheduleJob('0,30 * * * *', postMeme);
 
     postArgument();
 });
@@ -42,7 +42,7 @@ function scheduleEventJob(key) {
             const attendees = events[key];
             for (let index = 1; index < attendees.length; index++) {
                 const attendee = attendees[index];
-                bot.users.get(attendee).send(attendees[0] + ' is happening right now');
+                client.users.resolve(attendee).send(attendees[0] + ' is happening right now');
             }
             delete events[key];
             updateJSON(events);
@@ -72,21 +72,21 @@ async function postMeme() {
     let res = await axios
         .get('https://www.reddit.com/r/dankmemes/hot.json')
         .catch(function (error) {
-            bot.channels
-                .get(CHANNEL_MEMES)
+            client.channels
+                .resolve(CHANNEL_MEMES)
                 .send('Reddit is down with status code: ' + error);
             console.log(error);
         });
 
     let json_obj = res.data;
-
+    
     // Fetches 100 messages from the dank memes channel
-    bot.channels
-        .get(CHANNEL_MEMES)
-        .fetchMessages({ limit: 100 })
+    client.channels
+        .resolve(CHANNEL_MEMES)
+        .messages.fetch({ limit: 100 })
         .then(messages => {
             messages = messages.filter(
-                m => m.author.id === BOT_ID
+                m => m.author.id === client.user.id
             );
 
             let posts = [];
@@ -100,46 +100,26 @@ async function postMeme() {
                 const post : Reddit.Data2 = json_obj.data.children[index].data;
 
                 // If the post is sticked (mod post), already posted (check the past 100 messages), or is from idea4granted, then skip it
-                while (post.stickied ||
+                if (post.stickied ||
                     posts.includes('https://www.reddit.com' + post.permalink) ||
-                    post.author === 'idea4granted'
-                ) {
+                    post.author === 'idea4granted') {
                     continue;
                 }
 
                 let mediaUrl;
                 // Attempt to get an image
-                if (post.media != null) {
-                    mediaUrl =
-                        post.media.oembed
-                            .thumbnail_url;
-                    // If no image is available get a gif
-                } else {
-                    mediaUrl = post.url;
-                }
+                mediaUrl = post.media == null ? post.url : post.media.oembed.thumbnail_url;
 
                 // Generate the embed to post to discord
-                let embed = {
+                let embed : any = {
                     title: post.title,
-                    url:
-                        'https://www.reddit.com' +
-                        post.permalink,
+                    url: 'https://www.reddit.com' + post.permalink,
                     color: 16728368,
-                    timestamp: new Date(
-                        post.created_utc *
-                        1000
-                    ).toISOString(),
-
+                    timestamp: post.created_utc * 1000,
                     author: {
                         name: post.author,
-                        url:
-                            'https://www.reddit.com/u/' +
-                            post.author
+                        url: 'https://www.reddit.com/u/' + post.author
                     },
-
-                    description: {},
-
-                    image: {}
                 };
 
                 // Check if post is video from imgur. gifv is proprietary so change the url to mp4
@@ -152,24 +132,24 @@ async function postMeme() {
                     };
                 }
 
-                bot.channels.get(CHANNEL_MEMES).send({
+                client.channels.resolve(CHANNEL_MEMES).send({
                     embed
                 });
 
                 // Only send video if it was an mp4
                 if (mediaUrl.substring(mediaUrl.length - 3) === 'mp4') {
-                    bot.channels.get(CHANNEL_MEMES).send({
+                    client.channels.resolve(CHANNEL_MEMES).send({
                         files: [mediaUrl]
                     });
                 }
 
-                
+                break;
             }
         })
         .catch(console.error);
 }
 
-bot.on('message', message => {
+client.on('message', message => {
     if (!message.author.bot && message.channel.type.toLowerCase() === 'text') {
         
         let msg = message.content; msg = msg.toLowerCase();
@@ -218,49 +198,8 @@ bot.on('message', message => {
     }
 });
 
-bot.on('error', info => {
+client.on('error', info => {
     console.log('Error event:\n' + info.message);
-});
-
-bot.on('raw', packet => {
-    // We don't want this to run on unrelated packets
-    if (!['MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE'].includes(packet.t)) return;
-    // Grab the channel to check the message from
-    const channel = bot.channels.get(packet.d.channel_id);
-    // There's no need to emit if the message is cached, because the event will fire anyway for that
-    if (channel.messages.has(packet.d.message_id)) return;
-    // Since we have confirmed the message is not cached, let's fetch it
-    channel.fetchMessage(packet.d.message_id).then(message => {
-        // Emojis can have identifiers of name:id format, so we have to account for that case as well
-        const emoji = packet.d.emoji.id ? `${packet.d.emoji.name}:${packet.d.emoji.id}` : packet.d.emoji.name;
-        // This gives us the reaction we need to emit the event properly, in top of the message object
-        const reaction = message.reactions.get(emoji);
-        // Adds the currently reacting user to the reaction's users collection.
-        if (reaction) reaction.users.set(packet.d.user_id, bot.users.get(packet.d.user_id));
-        // Check which type of event it is before emitting
-        if (packet.t === 'MESSAGE_REACTION_ADD') {
-            bot.emit('messageReactionAdd', reaction, bot.users.get(packet.d.user_id));
-        }
-        if (packet.t === 'MESSAGE_REACTION_REMOVE') {
-            bot.emit('messageReactionRemove', reaction, bot.users.get(packet.d.user_id));
-        }
-    });
-});
-
-bot.on('messageReactionRemove', (reaction, user) => {
-    const guild = bot.guilds.get(reaction.message.guild.id);
-
-    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != CHANNEL_MEMES) {
-        const embed = reaction.message.embeds[0];
-        embed.fields = embed.fields.filter(field => field.value != guild.member(user).displayName);
-        
-        reaction.message.edit(new Discord.RichEmbed(embed)).then(_ => {
-            if (embed.timestamp in events) {
-                events[embed.timestamp] = removeItemOnce(events[embed.timestamp], user.id);
-                updateJSON(events);
-            }
-        });
-    }
 });
 
 function updateJSON(events) {
@@ -275,20 +214,24 @@ function removeItemOnce(arr, value) {
     return arr;
 }
 
-bot.on('messageReactionAdd', (reaction, user) => {
+client.on('messageReactionAdd', async (reaction, user) => {
+    if(reaction.message.partial) {
+        await reaction.message.fetch();
+    }
+
     if (user.bot) {
         return;
     }
-
-    const guild = bot.guilds.get(reaction.message.guild.id);
-    if ((reaction.emoji.name === 'upvote') && reaction.message.embeds.length != 0 && reaction.message.author.id === BOT_ID) {
-        bot.channels
-            .get(CHANNEL_GENERAL)
-            .fetchMessages({ limit: 100 })
+    
+    const guild = client.guilds.resolve(reaction.message.guild.id);
+    if ((reaction.emoji.name === 'upvote') && reaction.message.embeds.length != 0 && reaction.message.author.id === client.user.id) {
+        client.channels
+            .resolve(CHANNEL_GENERAL)
+            .messages.fetch({ limit: 100 })
             .then(messages => {
                 // Filter out mesages from the bot
                 messages = messages.filter(
-                    m => m.author.id === BOT_ID
+                    m => m.author.id === client.user.id
                 );
 
                 // Check if meme was already posted
@@ -310,18 +253,18 @@ bot.on('messageReactionAdd', (reaction, user) => {
                 reaction.message.embeds[0].footer = { text: guild.member(user).displayName + ' shared this meme' };
 
                 // Finally send the meme
-                bot.channels.get(CHANNEL_GENERAL).send({ embed: reaction.message.embeds[0] });
+                client.channels.resolve(CHANNEL_GENERAL).send({ embed: reaction.message.embeds[0] });
 
                 // Check if video was included in description. If so then send that too
                 if (reaction.message.embeds[0].description != null && reaction.message.embeds[0].description != '') {
-                    bot.channels.get(CHANNEL_GENERAL).send({
+                    client.channels.resolve(CHANNEL_GENERAL).send({
                         files: [reaction.message.embeds[0].description]
                     });
                 }
             });
     }
 
-    if (reaction.emoji.name == '✅' && reaction.message.author.id === BOT_ID && reaction.message.channel.id != CHANNEL_MEMES) {
+    if (reaction.emoji.name == '✅' && reaction.message.author.id === client.user.id && reaction.message.channel.id != CHANNEL_MEMES) {
         const embed = reaction.message.embeds[0];
 
         for (let i = 0; i < embed.fields.length; i++) {
@@ -338,7 +281,7 @@ bot.on('messageReactionAdd', (reaction, user) => {
             },
         );
 
-        reaction.message.edit(new Discord.RichEmbed(embed)).then(_ => {
+        reaction.message.edit(new Discord.MessageEmbed(embed)).then(_ => {
             if (embed.timestamp in events) {
                 events[embed.timestamp].push(user.id);
                 updateJSON(events);
@@ -347,10 +290,29 @@ bot.on('messageReactionAdd', (reaction, user) => {
     }
 });
 
-bot.on('messageDelete', message => {
-    bot.channels.get(CHANNEL_LOGGING).send(message.author.username);
-    bot.channels.get(CHANNEL_LOGGING).send('Content: ' + message.content);
+client.on('messageReactionRemove', async (reaction, user) => {
+    if(reaction.message.partial) {
+        await reaction.message.fetch();
+    }
+
+    const guild = client.guilds.resolve(reaction.message.guild.id);
+    if (reaction.emoji.name == '✅' && reaction.message.author.id === client.user.id && reaction.message.channel.id != CHANNEL_MEMES) {
+        const embed = reaction.message.embeds[0];
+        embed.fields = embed.fields.filter(field => field.value != guild.member(user).displayName);
+        
+        reaction.message.edit(new Discord.MessageEmbed(embed)).then(_ => {
+            if (embed.timestamp in events) {
+                events[embed.timestamp] = removeItemOnce(events[embed.timestamp], user.id);
+                updateJSON(events);
+            }
+        });
+    }
 });
 
-bot.on('disconnect', console.log);
-bot.login(process.env.BOT_TOKEN);
+client.on('messageDelete', message => {
+    client.channels.resolve(CHANNEL_LOGGING).send(message.author.username);
+    client.channels.resolve(CHANNEL_LOGGING).send('Content: ' + message.content);
+});
+
+client.on('shardDisconnect', console.log);
+client.login(process.env.BOT_TOKEN);
