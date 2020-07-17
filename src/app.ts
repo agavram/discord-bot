@@ -1,32 +1,33 @@
-const Discord = require("discord.js");
+const Discord = require('discord.js');
 const bot = new Discord.Client();
-const schedule = require("node-schedule");
-const axios = require("axios");
-const phonetics = require('helpers/phonetic-alphabet');
+const schedule = require('node-schedule');
+const axios = require('axios');
+const phonetics = require('./helpers/phonetic-alphabet');
 const Sherlock = require('sherlockjs');
 const fs = require('fs');
 
-const BOT_ID = "377315020368773121";
-const CHANNEL_GENERAL = "509566135713398796";
-const CHANNEL_MEMES = "509569913543852033";
-const CHANNEL_LOGGING = "628970565042044938";
+const BOT_ID = '377315020368773121';
+const CHANNEL_GENERAL = '509566135713398796';
+const CHANNEL_MEMES = '509569913543852033';
+const CHANNEL_LOGGING = '628970565042044938';
+const DB_PATH = "./src/databases/events.json"
 
 require('dotenv').config()
 
 let events;
 
-bot.once("ready", () => {
+bot.once('ready', () => {
     console.log(`Logged in as ${bot.user.tag}`);
     initializeEvents();
-    // bot.user.setActivity("");
+    // bot.user.setActivity('');
     // Every half hour post a meme
-    let j = schedule.scheduleJob("0,30 * * * *", postMeme);
+    let j = schedule.scheduleJob('0,30 * * * *', postMeme);
 
     postArgument();
 });
 
 function initializeEvents() {
-    events = JSON.parse(fs.readFileSync('.databases/events.json'));
+    events = JSON.parse(fs.readFileSync(DB_PATH));
     Object.keys(events).forEach(function (key) {
         scheduleEventJob(key);
     });
@@ -41,7 +42,7 @@ function scheduleEventJob(key) {
             const attendees = events[key];
             for (let index = 1; index < attendees.length; index++) {
                 const attendee = attendees[index];
-                bot.users.get(attendee).send(attendees[0] + " is happening right now");
+                bot.users.get(attendee).send(attendees[0] + ' is happening right now');
             }
             delete events[key];
             updateJSON(events);
@@ -69,11 +70,11 @@ async function postArgument() {
  */
 async function postMeme() {
     let res = await axios
-        .get("https://www.reddit.com/r/dankmemes/hot.json")
+        .get('https://www.reddit.com/r/dankmemes/hot.json')
         .catch(function (error) {
             bot.channels
                 .get(CHANNEL_MEMES)
-                .send("Reddit is down with status code: " + error);
+                .send('Reddit is down with status code: ' + error);
             console.log(error);
         });
 
@@ -100,8 +101,8 @@ async function postMeme() {
 
                 // If the post is sticked (mod post), already posted (check the past 100 messages), or is from idea4granted, then skip it
                 while (post.stickied ||
-                    posts.includes("https://www.reddit.com" + post.permalink) ||
-                    post.author === "idea4granted"
+                    posts.includes('https://www.reddit.com' + post.permalink) ||
+                    post.author === 'idea4granted'
                 ) {
                     continue;
                 }
@@ -121,7 +122,7 @@ async function postMeme() {
                 let embed = {
                     title: post.title,
                     url:
-                        "https://www.reddit.com" +
+                        'https://www.reddit.com' +
                         post.permalink,
                     color: 16728368,
                     timestamp: new Date(
@@ -132,7 +133,7 @@ async function postMeme() {
                     author: {
                         name: post.author,
                         url:
-                            "https://www.reddit.com/u/" +
+                            'https://www.reddit.com/u/' +
                             post.author
                     },
 
@@ -143,7 +144,7 @@ async function postMeme() {
 
                 // Check if post is video from imgur. gifv is proprietary so change the url to mp4
                 if (mediaUrl.includes('imgur.com') && mediaUrl.substring(mediaUrl.length - 4) === 'gifv') {
-                    mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + "mp4";
+                    mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + 'mp4';
                     embed.description = mediaUrl;
                 } else {
                     embed.image = {
@@ -168,20 +169,20 @@ async function postMeme() {
         .catch(console.error);
 }
 
-bot.on("message", message => {
+bot.on('message', message => {
     if (!message.author.bot && message.channel.type.toLowerCase() === 'text') {
         
         let msg = message.content; msg = msg.toLowerCase();
 
-        if (msg.startsWith("!phonetic ")) {
+        if (msg.startsWith('!phonetic ')) {
             let input = msg.substring(10, msg.length);
-            let output = "";
+            let output = '';
 
             for (let i = 0; i < input.length; i++) {
                 if (phonetics[input.charAt(i).toUpperCase()] !== undefined) {
-                    output += phonetics[input.charAt(i).toUpperCase()] + " ";
-                } else if (input.charAt(i) == " ") {
-                    output = output.substring(0, output.length - 1) + "|";
+                    output += phonetics[input.charAt(i).toUpperCase()] + ' ';
+                } else if (input.charAt(i) == ' ') {
+                    output = output.substring(0, output.length - 1) + '|';
                 } else {
                     output =
                         output.substring(0, output.length - 1) +
@@ -192,7 +193,7 @@ bot.on("message", message => {
             message.channel.send(output);
         } 
         
-        if (msg.startsWith("!event ")) {
+        if (msg.startsWith('!event ')) {
             msg = msg.substring(msg.indexOf(' ') + 1);
             const parsed = Sherlock.parse(msg);
 
@@ -206,7 +207,7 @@ bot.on("message", message => {
             message.channel.send({
                 embed
             }).then(sent => {
-                sent.react("✅");
+                sent.react('✅');
                 if (parsed.startDate && new Date(parsed.startDate) > new Date()) {
                     events[sent.embeds[0].timestamp] = [parsed.eventTitle];
                     scheduleEventJob(sent.embeds[0].timestamp);
@@ -217,8 +218,8 @@ bot.on("message", message => {
     }
 });
 
-bot.on("error", info => {
-    console.log("Error event:\n" + info.message);
+bot.on('error', info => {
+    console.log('Error event:\n' + info.message);
 });
 
 bot.on('raw', packet => {
@@ -263,7 +264,7 @@ bot.on('messageReactionRemove', (reaction, user) => {
 });
 
 function updateJSON(events) {
-    fs.writeFileSync("databases/events.json", JSON.stringify(events));
+    fs.writeFileSync(DB_PATH, JSON.stringify(events));
 }
 
 function removeItemOnce(arr, value) {
@@ -274,7 +275,7 @@ function removeItemOnce(arr, value) {
     return arr;
 }
 
-bot.on("messageReactionAdd", (reaction, user) => {
+bot.on('messageReactionAdd', (reaction, user) => {
     if (user.bot) {
         return;
     }
@@ -306,7 +307,7 @@ bot.on("messageReactionAdd", (reaction, user) => {
                 }
 
                 // State who shared the meme
-                reaction.message.embeds[0].footer = { text: guild.member(user).displayName + " shared this meme" };
+                reaction.message.embeds[0].footer = { text: guild.member(user).displayName + ' shared this meme' };
 
                 // Finally send the meme
                 bot.channels.get(CHANNEL_GENERAL).send({ embed: reaction.message.embeds[0] });
@@ -332,7 +333,7 @@ bot.on("messageReactionAdd", (reaction, user) => {
 
         embed.fields.push(
             {
-                name: "Attendee",
+                name: 'Attendee',
                 value: guild.member(user).displayName,
             },
         );
@@ -346,10 +347,10 @@ bot.on("messageReactionAdd", (reaction, user) => {
     }
 });
 
-bot.on("messageDelete", message => {
+bot.on('messageDelete', message => {
     bot.channels.get(CHANNEL_LOGGING).send(message.author.username);
-    bot.channels.get(CHANNEL_LOGGING).send("Content: " + message.content);
+    bot.channels.get(CHANNEL_LOGGING).send('Content: ' + message.content);
 });
 
-bot.on("disconnect", console.log);
-bot.login(require("./tokens/discordToken.js"));
+bot.on('disconnect', console.log);
+bot.login(process.env.BOT_TOKEN);
