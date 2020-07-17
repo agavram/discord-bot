@@ -85,6 +85,7 @@ async function postMeme() {
         .resolve(CHANNEL_MEMES)
         .messages.fetch({ limit: 100 })
         .then(messages => {
+            // Get only messages from the bot
             messages = messages.filter(
                 m => m.author.id === client.user.id
             );
