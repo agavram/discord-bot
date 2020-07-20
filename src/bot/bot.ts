@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel } from "discord.js";
+import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, PartialMessage } from "discord.js";
 import { MongoClient, Collection } from 'mongodb';
 import { EventEmitter } from "events";
 import { scheduleJob } from "node-schedule";
@@ -50,9 +50,14 @@ export default class Bot {
         });
 
         this.client.on('messageDelete', message => {
-            this.serversCollection.findOne({ "server": message.guild.id }).then((server: server) => {
+
+            this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
                 if (message.channel.id != server.channelLogging) {
                     const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
+
+                    if (message.author.partial)
+                        await message.author.fetch();
+
                     tc.send(message.author.username);
                     tc.send('Content: ' + message.content);
                 }
@@ -283,5 +288,3 @@ export default class Bot {
         });
     }
 }
-
-let bot = new Bot();
