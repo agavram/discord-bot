@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, PartialMessage } from "discord.js";
+import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from "discord.js";
 import { MongoClient, Collection } from 'mongodb';
 import { EventEmitter } from "events";
 import { scheduleJob } from "node-schedule";
@@ -26,37 +26,39 @@ export default class Bot {
 
     constructor() {
         const command = new EventEmitter();
+        const reaction = new EventEmitter();
 
         this.Ready = new Promise((resolve, reject) => {
             this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
+            this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
 
-            MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
-                this.mongoClient = client;
-            }).then(_ => {
+                MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
+                    this.mongoClient = client;
+                }).then(_ => {
 
-                this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
-                this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
+                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
+                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
 
-                Promise.allSettled([
+                    Promise.allSettled([
 
-                    this.eventsCollection.find({}).toArray().then(docs => {
-                        this.events = docs;
-                    }),
-                    this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
-                    this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
+                        this.eventsCollection.find({}).toArray().then(docs => {
+                            this.events = docs;
+                        }),
+                        this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
 
-                ]).then(_ => {
-                    
-                    scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
-                    resolve(undefined);
+                    ]).then(_ => {
+
+                        this.client.once('ready', () => {
+                            scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
+                            resolve(undefined);
+                        });
+
+                    });
 
                 });
-
-            });
         });
 
         this.client.on('messageDelete', message => {
-
             this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
                 if (message.channel.id != server.channelLogging) {
                     const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
@@ -81,104 +83,75 @@ export default class Bot {
             }
         });
 
-        this.client.on('messageReactionAdd', async (reaction: MessageReaction, user: User) => {
-            if (reaction.message.partial)
-                await reaction.message.fetch();
+        ['messageReactionAdd', 'messageReactionRemove'].forEach(e => {
+            //@ts-expect-error
+            this.client.on(e, async (messageReaction: MessageReaction, user: User) => {
+                if (messageReaction.message.partial)
+                    await messageReaction.message.fetch();
 
-            if (user.bot || reaction.message.author.id !== this.client.user.id || reaction.message.embeds.length == 0)
-                return;
+                if (user.bot || messageReaction.message.author.id !== this.client.user.id || messageReaction.message.embeds.length == 0)
+                    return;
 
-            let embed = reaction.message.embeds[0];
-            const guild = this.client.guilds.resolve(reaction.message.guild.id);
-
-            if (reaction.emoji.name === 'upvote') {
-                this.serversCollection.findOne({ "server": reaction.message.guild.id }).then((server: server) => {
-                    const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
-                    tc.messages.fetch({ limit: 100 }).then((messages) => {
-                        if (messages.find(msg => {
-                            if (msg.embeds.length > 0)
-                                if (msg.embeds[0].url === reaction.message.embeds[0].url) return true;
-                            return false;
-                        }))
-                            return false;
-
-                        reaction.message.embeds[0].footer = { text: guild.member(user).displayName + ' shared this meme' };
-
-                        tc.send({ embed: reaction.message.embeds[0] }).then(_ => {
-                            // Check if video was included in description. If so then send that too
-                            if (reaction.message.embeds[0].description != null) {
-                                tc.send({
-                                    files: [reaction.message.embeds[0].description]
-                                });
-                            }
-                        });
-                    });
-                });
-
-            }
-
-
-            if (reaction.emoji.name == '✅' && embed.color != 16728368) {
-                for (let i = 0; i < embed.fields.length; i++) {
-                    const field = embed.fields[i];
-                    if (field.value === guild.member(user).displayName) {
-                        return;
-                    }
-                }
-
-                embed.fields.push({ name: 'Attendee', value: guild.member(user).displayName, inline: false });
-
-                reaction.message.edit(new MessageEmbed(embed)).then(_ => {
-                    const index = this.events.findIndex(e => e.time.valueOf() === embed.timestamp);
-                    if (index >= 0) {
-                        this.events[index].attendees.push(user.id);
-                        this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
-                    }
-                });
-            }
+                const guild = this.client.guilds.resolve(messageReaction.message.guild.id);
+                reaction.emit(messageReaction.emoji.name, messageReaction, user, guild, e);
+            });
         });
 
-        this.client.on('messageReactionRemove', async (reaction: MessageReaction, user: User) => {
-            if (reaction.message.partial) {
-                await reaction.message.fetch();
-            }
+        reaction.on('upvote', (reaction: MessageReaction, user: User, guild: Guild, event) => {
+            if (event !== 'messageReactionAdd') return;
 
-            if (user.bot || reaction.message.author.id !== this.client.user.id || reaction.message.embeds.length == 0)
-                return;
+            this.serversCollection.findOne({ "server": reaction.message.guild.id }).then((server: server) => {
+                const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
+                tc.messages.fetch({ limit: 100 }).then((messages) => {
+                    if (messages.find(msg => {
+                        if (msg.embeds.length > 0)
+                            return msg.embeds[0].url === reaction.message.embeds[0].url;
+                    }))
+                        return false;
 
-            const guild = this.client.guilds.resolve(reaction.message.guild.id);
-            const embed = reaction.message.embeds[0];
+                    reaction.message.embeds[0].setFooter(guild.member(user).displayName + ' shared this meme');
 
-            if (reaction.emoji.name == '✅' && embed.color != 16728368) {
-                embed.fields = embed.fields.filter(field => field.value != guild.member(user).displayName);
-
-                reaction.message.edit(new MessageEmbed(embed)).then(_ => {
-                    const index = this.events.findIndex(e => e.time.valueOf() === embed.timestamp);
-                    if (index >= 0) {
-                        this.events[index].attendees = this.events[index].attendees.filter(a => a != user.id);
-                        this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
-                    }
+                    tc.send({ embed: reaction.message.embeds[0] }).then(_ => {
+                        // Check if video was included in description. If so then send that too
+                        if (reaction.message.embeds[0].description != null) {
+                            tc.send({ files: [reaction.message.embeds[0].description] });
+                        }
+                    });
                 });
-            }
+            });
+        });
+
+        reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
+            let embed = reaction.message.embeds[0];
+
+            if (embed.color === 16728368) return;
+
+            if (event === 'messageReactionAdd')
+                embed.fields.push({ name: 'Attendee', value: guild.member(user).displayName, inline: false });
+            else
+                embed.fields = embed.fields.filter(field => field.value !== guild.member(user).displayName);
+
+            reaction.message.edit(new MessageEmbed(embed)).then(_ => {
+                const index = this.events.findIndex(e => e.time.valueOf() === embed.timestamp);
+                if (index >= 0) {
+                    event === 'messageReactionAdd' ? this.events[index].attendees.push(user.id) :
+                        this.events[index].attendees = this.events[index].attendees.filter(a => a != user.id);
+                    this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
+                }
+            });
+
         });
 
         command.on('event', (message: Message) => {
             const parsed = Sherlock.parse(message.content);
 
             // Generate the embed to post to discord
-            let embed = {
-                title: parsed.eventTitle,
-                fields: [],
-                timestamp: parsed.startDate,
-            };
+            let embed = { title: parsed.eventTitle, fields: [], timestamp: parsed.startDate };
 
-            message.channel.send({
-                embed
-            }).then(sent => {
+            message.channel.send({ embed }).then(sent => {
                 sent.react('✅');
-                if (parsed.startDate && new Date(parsed.startDate) > new Date()) {
+                if (parsed.startDate && new Date(parsed.startDate) > new Date())
                     this.newEvent(parsed.eventTitle, parsed.startDate);
-                }
             });
         });
 
@@ -187,14 +160,12 @@ export default class Bot {
             let output: string = "";
 
             for (let i = 0; i < input.length; i++) {
-                if (phonetics[input.charAt(i).toUpperCase()] !== undefined) {
+                if (phonetics[input.charAt(i).toUpperCase()]) {
                     output += phonetics[input.charAt(i).toUpperCase()] + ' ';
                 } else if (input.charAt(i) == ' ') {
                     output = output.substring(0, output.length - 1) + '|';
                 } else {
-                    output =
-                        output.substring(0, output.length - 1) +
-                        input.charAt(i);
+                    output = output.substring(0, output.length - 1) + input.charAt(i);
                 }
             }
 
@@ -202,7 +173,7 @@ export default class Bot {
         });
 
         command.on('ping', (message: Message) => {
-            message.channel.send('pong');
+            message.channel.send(this.client.ws.ping + " ms");
         });
     }
 
@@ -223,10 +194,8 @@ export default class Bot {
         let res = await axios.get('https://www.reddit.com/r/dankmemes/hot.json');
         if (res.status >= 400) {
             servers.forEach(server => {
-                this.client.channels
-                    .resolve(server.channelMemes)
-                    //@ts-ignore
-                    .send('Reddit is down with status code: ' + res.status);
+                //@ts-ignore
+                this.client.channels.resolve(server.channelMemes).send('Reddit is down with status code: ' + res.status);
             });
             return;
         }
@@ -267,13 +236,10 @@ export default class Bot {
                 } else
                     embed.image = { url: mediaUrl };
 
-                // @ts-ignore
-                this.client.channels.resolve(server.channelMemes).send({
-                    embed: embed
-                }).then(() => {
-                    if (mediaUrl.endsWith('mp4')) this.client.channels.cache.get(server.channelMemes)
-                        // @ts-ignore
-                        .send({ files: [mediaUrl] });
+                const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
+                tc.send({ embed: embed }).then(() => {
+                    if (mediaUrl.endsWith('mp4')) this.client.channels.cache.get(server.channelMemes);
+                    tc.send({ files: [mediaUrl] });
                 });
 
                 break;
