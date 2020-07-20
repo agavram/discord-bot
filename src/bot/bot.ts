@@ -146,7 +146,7 @@ export default class Bot {
             const parsed = Sherlock.parse(message.content);
 
             // Generate the embed to post to discord
-            let embed = { title: parsed.eventTitle, fields: [], timestamp: parsed.startDate };
+            let embed = { title: parsed.eventTitle, fields: [], timestamp: new Date(parsed.startDate).valueOf() };
 
             message.channel.send({ embed }).then(sent => {
                 sent.react('✅');
