@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "deploy": "tsc && node dist/app",
+    "deploy": "tsc && nodemon dist/app",
     "dev": "ts-node-dev --files src/app.ts",
     "build": "tsc"
   },
