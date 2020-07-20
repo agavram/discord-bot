@@ -61,7 +61,7 @@ export default class Bot {
         this.client.on('messageDelete', message => {
             this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
                 if (message.channel.id != server.channelLogging) {
-                    const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
+                    const tc = this.client.channels.resolve(server.channelLogging) as TextChannel;
 
                     if (message.author.partial)
                         await message.author.fetch();
