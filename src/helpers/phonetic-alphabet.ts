@@ -1,4 +1,4 @@
-module.exports = {
+export const phonetics = {
     A: "Alpha",
     B: "Bravo",
     C: "Charlie",
