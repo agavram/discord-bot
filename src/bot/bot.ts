@@ -30,22 +30,28 @@ export default class Bot {
         this.Ready = new Promise((resolve, reject) => {
             this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
 
-            Promise.allSettled([
-                MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
-                    this.mongoClient = client;
-                }),
-                this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
-            ]).then(result => {
+            MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
+                this.mongoClient = client;
+            }).then(_ => {
 
                 this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
                 this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
-                this.eventsCollection.find({}).toArray().then(docs => {
-                    this.events = docs;
-                });
-                this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } });
 
-                scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
-                resolve(undefined);
+                Promise.allSettled([
+
+                    this.eventsCollection.find({}).toArray().then(docs => {
+                        this.events = docs;
+                    }),
+                    this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
+                    this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
+
+                ]).then(_ => {
+                    
+                    scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
+                    resolve(undefined);
+
+                });
+
             });
         });
 
