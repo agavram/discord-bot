@@ -10,14 +10,14 @@ import { server, event } from "../interfaces/database";
 import { ifProd } from "../helpers/functions";
 import axios from 'axios';
 import { phonetics } from "../helpers/phonetic-alphabet";
-import * as Sherlock from "sherlockjs";
+import { parse } from "sherlockjs";
 
 export default class Bot {
-    public Ready: Promise<any>;
+    public Ready: Promise<void>;
 
     client: Client;
-
     mongoClient: MongoClient;
+    
     eventsCollection: Collection;
     serversCollection: Collection;
 
@@ -39,19 +39,17 @@ export default class Bot {
                 }).then(_ => {
                     this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
                     this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
-
                     Promise.allSettled([
-
                         this.eventsCollection.find({}).toArray().then(docs => {
                             this.events = docs;
                         }),
                         this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
-
                     ]).then(_ => {
-
                         this.client.once('ready', () => {
-                            scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
-                            resolve(undefined);
+                            scheduleJob('0,30 * * * *', () => {
+                                this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
+                            });
+                            resolve();
                         });
                     });
                 });
@@ -113,7 +111,7 @@ export default class Bot {
 
                     tc.send({ embed }).then(_ => {
                         // Check if video was included in description. If so then send that too
-                        if (embed.description != null)
+                        if (embed.description)
                             tc.send({ files: [embed.description] });
                     });
                 });
@@ -122,7 +120,6 @@ export default class Bot {
 
         reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
             let embed = reaction.message.embeds[0];
-
             if (embed.author) return;
 
             if (event === 'messageReactionAdd')
@@ -132,17 +129,17 @@ export default class Bot {
 
             reaction.message.edit(new MessageEmbed(embed)).then(_ => {
                 const index = this.events.findIndex(e => e.time.valueOf() === embed.timestamp);
-                if (index >= 0) {
-                    event === 'messageReactionAdd' ? this.events[index].attendees.push(user.id) :
-                        this.events[index].attendees = this.events[index].attendees.filter(a => a != user.id);
-                    this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
-                }
-            });
+                if (index < 0)
+                    return;
 
+                event === 'messageReactionAdd' ? this.events[index].attendees.push(user.id) :
+                    this.events[index].attendees = this.events[index].attendees.filter(a => a != user.id);
+                this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
+            });
         });
 
         command.on('event', (message: Message) => {
-            const parsed = Sherlock.parse(message.content);
+            const parsed = parse(message.content);
 
             // Generate the embed to post to discord
             let embed = { title: parsed.eventTitle, fields: [], timestamp: new Date(parsed.startDate).valueOf() };
@@ -159,13 +156,12 @@ export default class Bot {
             let output: string = "";
 
             for (let i = 0; i < input.length; i++) {
-                if (phonetics[input.charAt(i).toUpperCase()]) {
+                if (phonetics[input.charAt(i).toUpperCase()])
                     output += phonetics[input.charAt(i).toUpperCase()] + ' ';
-                } else if (input.charAt(i) == ' ') {
+                else if (input.charAt(i) == ' ')
                     output = output.substring(0, output.length - 1) + '|';
-                } else {
+                else
                     output = output.substring(0, output.length - 1) + input.charAt(i);
-                }
             }
 
             message.channel.send(output);
@@ -187,9 +183,7 @@ export default class Bot {
         this.eventsCollection.updateOne({ "time": time }, { $set: { attendees } });
     }
 
-    private async sendMeme() {
-        const servers: Array<server> = await this.serversCollection.find({}).toArray();
-
+    private async sendMeme(servers: Array<server>) {
         let res = await axios.get('https://www.reddit.com/r/dankmemes/hot.json');
         if (res.status >= 400) {
             servers.forEach(server => {
@@ -218,11 +212,11 @@ export default class Bot {
 
                 // Generate the embed to post to discord
                 let embed = new MessageEmbed()
-                .setColor(this.redditColor)
-                .setTitle(post.title)
-                .setURL('https://www.reddit.com' + post.permalink)
-                .setTimestamp(post.created_utc * 1000)
-                .setAuthor(post.author, 'https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png', 'https://www.reddit.com/u/' + post.author)
+                    .setColor(this.redditColor)
+                    .setTitle(post.title)
+                    .setURL('https://www.reddit.com' + post.permalink)
+                    .setTimestamp(post.created_utc * 1000)
+                    .setAuthor(post.author, 'https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png', 'https://www.reddit.com/u/' + post.author);
 
                 // Check if post is video from imgur. gifv is proprietary so change the url to mp4
                 if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
@@ -245,9 +239,8 @@ export default class Bot {
     private scheduleEventJob(time: Date) {
         scheduleJob(time, () => {
             const index = this.events.findIndex(e => e.time === time);
-            const attendees = this.events[index].attendees;
 
-            attendees.forEach(attendee => {
+            this.events[index].attendees.forEach(attendee => {
                 this.client.users.resolve(attendee).send(this.events[index].title + ' is happening right now');
             });
 

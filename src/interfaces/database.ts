@@ -13,7 +13,3 @@ export interface event {
     time: Date,
     attendees: Array<string>
 }
-
-interface date {
-    
-}

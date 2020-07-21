@@ -1,8 +1,7 @@
 {
   "name": "discord_bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/app.js",
+  "main": "dist/app.ts",
   "scripts": {
     "deploy": "tsc && nodemon dist/app",
     "dev": "ts-node-dev --files src/app.ts",
@@ -12,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/mongodb": "^3.5.25",
-    "@types/node": "^14.0.23",
+    "@types/node": "^14.0.24",
     "axios": "^0.19.2",
     "bufferutil": "^4.0.1",
     "discord.js": "^12.2.0",
