@@ -235,7 +235,7 @@ export default class Bot {
 
                 const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
                 tc.send({ embed: embed }).then(() => {
-                    if (mediaUrl.endsWith('mp4')) this.client.channels.cache.get(server.channelMemes);
+                    if (mediaUrl.endsWith('mp4'))
                         tc.send({ files: [mediaUrl] });
                 });
 
