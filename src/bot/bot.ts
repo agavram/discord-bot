@@ -32,30 +32,27 @@ export default class Bot {
             this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
             this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
 
-                MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
-                    this.mongoClient = client;
-                }).then(_ => {
+            MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
+                this.mongoClient = client;
+            }).then(_ => {
+                this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
+                this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
 
-                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
-                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
+                Promise.allSettled([
 
-                    Promise.allSettled([
+                    this.eventsCollection.find({}).toArray().then(docs => {
+                        this.events = docs;
+                    }),
+                    this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
 
-                        this.eventsCollection.find({}).toArray().then(docs => {
-                            this.events = docs;
-                        }),
-                        this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
+                ]).then(_ => {
 
-                    ]).then(_ => {
-
-                        this.client.once('ready', () => {
-                            scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
-                            resolve(undefined);
-                        });
-
+                    this.client.once('ready', () => {
+                        scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
+                        resolve(undefined);
                     });
-
                 });
+            });
         });
 
         this.client.on('messageDelete', message => {
@@ -239,7 +236,7 @@ export default class Bot {
                 const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
                 tc.send({ embed: embed }).then(() => {
                     if (mediaUrl.endsWith('mp4')) this.client.channels.cache.get(server.channelMemes);
-                    tc.send({ files: [mediaUrl] });
+                        tc.send({ files: [mediaUrl] });
                 });
 
                 break;
