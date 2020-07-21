@@ -24,6 +24,8 @@ export default class Bot {
     prefix: string = "!";
     events: Array<event> = [];
 
+    readonly redditColor: string = "#FF4500";
+
     constructor() {
         const command = new EventEmitter();
         const reaction = new EventEmitter();
@@ -32,27 +34,27 @@ export default class Bot {
             this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
             this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
 
-            MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
-                this.mongoClient = client;
-            }).then(_ => {
-                this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
-                this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
+                MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
+                    this.mongoClient = client;
+                }).then(_ => {
+                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
+                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
 
-                Promise.allSettled([
+                    Promise.allSettled([
 
-                    this.eventsCollection.find({}).toArray().then(docs => {
-                        this.events = docs;
-                    }),
-                    this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
+                        this.eventsCollection.find({}).toArray().then(docs => {
+                            this.events = docs;
+                        }),
+                        this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
 
-                ]).then(_ => {
+                    ]).then(_ => {
 
-                    this.client.once('ready', () => {
-                        scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
-                        resolve(undefined);
+                        this.client.once('ready', () => {
+                            scheduleJob('0,30 * * * *', () => { this.sendMeme(); });
+                            resolve(undefined);
+                        });
                     });
                 });
-            });
         });
 
         this.client.on('messageDelete', message => {
@@ -95,24 +97,24 @@ export default class Bot {
         });
 
         reaction.on('upvote', (reaction: MessageReaction, user: User, guild: Guild, event) => {
-            if (event !== 'messageReactionAdd') return;
+            let embed = reaction.message.embeds[0];
+            if (event !== 'messageReactionAdd' || !embed.author) return;
 
             this.serversCollection.findOne({ "server": reaction.message.guild.id }).then((server: server) => {
                 const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
                 tc.messages.fetch({ limit: 100 }).then((messages) => {
                     if (messages.find(msg => {
                         if (msg.embeds.length > 0)
-                            return msg.embeds[0].url === reaction.message.embeds[0].url;
+                            return msg.embeds[0].url === embed.url;
                     }))
                         return false;
 
-                    reaction.message.embeds[0].setFooter(guild.member(user).displayName + ' shared this meme');
+                    embed.setFooter(guild.member(user).displayName + ' shared this meme');
 
-                    tc.send({ embed: reaction.message.embeds[0] }).then(_ => {
+                    tc.send({ embed }).then(_ => {
                         // Check if video was included in description. If so then send that too
-                        if (reaction.message.embeds[0].description != null) {
-                            tc.send({ files: [reaction.message.embeds[0].description] });
-                        }
+                        if (embed.description != null)
+                            tc.send({ files: [embed.description] });
                     });
                 });
             });
@@ -121,7 +123,7 @@ export default class Bot {
         reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
             let embed = reaction.message.embeds[0];
 
-            if (embed.color === 16728368) return;
+            if (embed.author) return;
 
             if (event === 'messageReactionAdd')
                 embed.fields.push({ name: 'Attendee', value: guild.member(user).displayName, inline: false });
@@ -215,16 +217,12 @@ export default class Bot {
                 let mediaUrl: string = post.media == null ? post.url : post.media.oembed.thumbnail_url;
 
                 // Generate the embed to post to discord
-                let embed: any = {
-                    title: post.title,
-                    url: 'https://www.reddit.com' + post.permalink,
-                    color: 16728368,
-                    timestamp: post.created_utc * 1000,
-                    author: {
-                        name: post.author,
-                        url: 'https://www.reddit.com/u/' + post.author
-                    },
-                };
+                let embed = new MessageEmbed()
+                .setColor(this.redditColor)
+                .setTitle(post.title)
+                .setURL('https://www.reddit.com' + post.permalink)
+                .setTimestamp(post.created_utc * 1000)
+                .setAuthor(post.author, 'https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png', 'https://www.reddit.com/u/' + post.author)
 
                 // Check if post is video from imgur. gifv is proprietary so change the url to mp4
                 if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
