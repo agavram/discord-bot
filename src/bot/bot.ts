@@ -2,13 +2,13 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from "discord.js";
-import { MongoClient, Collection } from 'mongodb';
+import { MongoClient, Collection } from "mongodb";
 import { EventEmitter } from "events";
 import { scheduleJob } from "node-schedule";
 import { Data2, Child } from "../interfaces/reddit";
 import { server, event } from "../interfaces/database";
 import { ifProd } from "../helpers/functions";
-import axios from 'axios';
+import axios from "axios";
 import { phonetics } from "../helpers/phonetic-alphabet";
 import { parse } from "sherlockjs";
 
@@ -17,7 +17,7 @@ export default class Bot {
 
     client: Client;
     mongoClient: MongoClient;
-    
+
     eventsCollection: Collection;
     serversCollection: Collection;
 
@@ -31,22 +31,22 @@ export default class Bot {
         const reaction = new EventEmitter();
 
         this.Ready = new Promise((resolve, reject) => {
-            this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
+            this.client = new Client({ partials: ["MESSAGE", "REACTION"] });
             this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
 
                 MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
                     this.mongoClient = client;
                 }).then(_ => {
-                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('events');
-                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection('servers');
+                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("events");
+                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("servers");
                     Promise.allSettled([
-                        this.eventsCollection.find({}).toArray().then(docs => {
+                        this.eventsCollection.find({}).toArray().then((docs) => {
                             this.events = docs;
                         }),
                         this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
-                    ]).then(_ => {
-                        this.client.once('ready', () => {
-                            scheduleJob('0,30 * * * *', () => {
+                    ]).then(() => {
+                        this.client.once("ready", () => {
+                            scheduleJob("0,30 * * * *", () => {
                                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
                             });
                             resolve();
@@ -55,32 +55,32 @@ export default class Bot {
                 });
         });
 
-        this.client.on('messageDelete', message => {
+        this.client.on("messageDelete", message => {
             this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
-                if (message.channel.id != server.channelLogging) {
+                if (message.channel.id !== server.channelLogging) {
                     const tc = this.client.channels.resolve(server.channelLogging) as TextChannel;
 
                     if (message.author.partial)
                         await message.author.fetch();
 
                     tc.send(message.author.username);
-                    tc.send('Content: ' + message.content);
+                    tc.send("Content: " + message.content);
                 }
             });
         });
 
-        this.client.on('message', message => {
-            if (message.author.bot || message.channel.type.toLowerCase() !== 'text')
+        this.client.on("message", message => {
+            if (message.author.bot || message.channel.type.toLowerCase() !== "text")
                 return;
 
             let msg = message.content;
             if (msg.startsWith(this.prefix)) {
-                message.content = msg.split(' ').slice(1).join(' ');
+                message.content = msg.split(" ").slice(1).join(" ");
                 command.emit(msg.substring(this.prefix.length).split(" ")[0], message);
             }
         });
 
-        ['messageReactionAdd', 'messageReactionRemove'].forEach(e => {
+        ["messageReactionAdd", "messageReactionRemove"].forEach((e) => {
             //@ts-expect-error
             this.client.on(e, async (messageReaction: MessageReaction, user: User) => {
                 if (messageReaction.message.partial)
@@ -94,9 +94,9 @@ export default class Bot {
             });
         });
 
-        reaction.on('upvote', (reaction: MessageReaction, user: User, guild: Guild, event) => {
+        reaction.on("upvote", (reaction: MessageReaction, user: User, guild: Guild, event) => {
             let embed = reaction.message.embeds[0];
-            if (event !== 'messageReactionAdd' || !embed.author) return;
+            if (event !== "messageReactionAdd" || !embed.author) return;
 
             this.serversCollection.findOne({ "server": reaction.message.guild.id }).then((server: server) => {
                 const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
@@ -107,9 +107,9 @@ export default class Bot {
                     }))
                         return false;
 
-                    embed.setFooter(guild.member(user).displayName + ' shared this meme');
+                    embed.setFooter(guild.member(user).displayName + " shared this meme");
 
-                    tc.send({ embed }).then(_ => {
+                    tc.send({ embed }).then(() => {
                         // Check if video was included in description. If so then send that too
                         if (embed.description)
                             tc.send({ files: [embed.description] });
@@ -118,48 +118,47 @@ export default class Bot {
             });
         });
 
-        reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
+        reaction.on("✅", (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
             let embed = reaction.message.embeds[0];
             if (embed.author) return;
 
-            if (event === 'messageReactionAdd')
-                embed.fields.push({ name: 'Attendee', value: guild.member(user).displayName, inline: false });
+            if (event === "messageReactionAdd")
+                embed.fields.push({ name: "Attendee", value: guild.member(user).displayName, inline: false });
             else
                 embed.fields = embed.fields.filter(field => field.value !== guild.member(user).displayName);
 
             reaction.message.edit(new MessageEmbed(embed)).then(_ => {
                 const index = this.events.findIndex(e => e.time.valueOf() === embed.timestamp);
-                if (index < 0)
-                    return;
+                if (index < 0) return;
 
-                event === 'messageReactionAdd' ? this.events[index].attendees.push(user.id) :
+                event === "messageReactionAdd" ? this.events[index].attendees.push(user.id) :
                     this.events[index].attendees = this.events[index].attendees.filter(a => a != user.id);
                 this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
             });
         });
 
-        command.on('event', (message: Message) => {
+        command.on("event", (message: Message) => {
             const parsed = parse(message.content);
 
             // Generate the embed to post to discord
             let embed = { title: parsed.eventTitle, fields: [], timestamp: new Date(parsed.startDate).valueOf() };
 
             message.channel.send({ embed }).then(sent => {
-                sent.react('✅');
+                sent.react("✅");
                 if (parsed.startDate && new Date(parsed.startDate) > new Date())
                     this.newEvent(parsed.eventTitle, parsed.startDate);
             });
         });
 
-        command.on('phonetic', (message: Message) => {
+        command.on("phonetic", (message: Message) => {
             let input = message.content.trim();
             let output: string = "";
 
             for (let i = 0; i < input.length; i++) {
                 if (phonetics[input.charAt(i).toUpperCase()])
-                    output += phonetics[input.charAt(i).toUpperCase()] + ' ';
-                else if (input.charAt(i) == ' ')
-                    output = output.substring(0, output.length - 1) + '|';
+                    output += phonetics[input.charAt(i).toUpperCase()] + " ";
+                else if (input.charAt(i) == " ")
+                    output = output.substring(0, output.length - 1) + "|";
                 else
                     output = output.substring(0, output.length - 1) + input.charAt(i);
             }
@@ -167,7 +166,7 @@ export default class Bot {
             message.channel.send(output);
         });
 
-        command.on('ping', (message: Message) => {
+        command.on("ping", (message: Message) => {
             message.channel.send(this.client.ws.ping + " ms");
         });
     }
@@ -184,11 +183,11 @@ export default class Bot {
     }
 
     private async sendMeme(servers: Array<server>) {
-        let res = await axios.get('https://www.reddit.com/r/dankmemes/hot.json');
+        let res = await axios.get("https://www.reddit.com/r/dankmemes/hot.json");
         if (res.status >= 400) {
             servers.forEach(server => {
                 //@ts-ignore
-                this.client.channels.resolve(server.channelMemes).send('Reddit is down with status code: ' + res.status);
+                this.client.channels.resolve(server.channelMemes).send("Reddit is down with status code: " + res.status);
             });
             return;
         }
@@ -198,7 +197,7 @@ export default class Bot {
         servers.forEach(server => {
             for (let index = 0; index < posts.length; index++) {
                 const post: Data2 = posts[index].data;
-                if (server.posts.includes(post.id) || post.stickied || post.author === 'idea4granted')
+                if (server.posts.includes(post.id) || post.stickied || post.author === "idea4granted")
                     continue;
 
                 if (server.posts.length > 48)
@@ -214,20 +213,20 @@ export default class Bot {
                 let embed = new MessageEmbed()
                     .setColor(this.redditColor)
                     .setTitle(post.title)
-                    .setURL('https://www.reddit.com' + post.permalink)
+                    .setURL("https://www.reddit.com" + post.permalink)
                     .setTimestamp(post.created_utc * 1000)
-                    .setAuthor(post.author, 'https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png', 'https://www.reddit.com/u/' + post.author);
+                    .setAuthor(post.author, "https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png", "https://www.reddit.com/u/" + post.author);
 
                 // Check if post is video from imgur. gifv is proprietary so change the url to mp4
-                if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
-                    mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + 'mp4';
+                if (mediaUrl.includes("imgur.com") && mediaUrl.endsWith("gifv")) {
+                    mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + "mp4";
                     embed.description = mediaUrl;
                 } else
                     embed.image = { url: mediaUrl };
 
                 const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
                 tc.send({ embed: embed }).then(() => {
-                    if (mediaUrl.endsWith('mp4'))
+                    if (mediaUrl.endsWith("mp4"))
                         tc.send({ files: [mediaUrl] });
                 });
 
@@ -241,7 +240,7 @@ export default class Bot {
             const index = this.events.findIndex(e => e.time === time);
 
             this.events[index].attendees.forEach(attendee => {
-                this.client.users.resolve(attendee).send(this.events[index].title + ' is happening right now');
+                this.client.users.resolve(attendee).send(this.events[index].title + " is happening right now");
             });
 
             this.eventsCollection.deleteOne({ "time": time });
