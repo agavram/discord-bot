@@ -11,6 +11,7 @@ import { ifProd } from "../helpers/functions";
 import axios from "axios";
 import { phonetics } from "../helpers/phonetic-alphabet";
 import { parse } from "sherlockjs";
+import { GoogleSearchPlugin } from "../plugins/google";
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -168,6 +169,13 @@ export default class Bot {
 
         command.on("ping", (message: Message) => {
             message.channel.send(this.client.ws.ping + " ms");
+        });
+
+        command.on("search", async (message: Message) => {
+            const results = await GoogleSearchPlugin.search(message.content);
+
+            let embed = new MessageEmbed().addFields(results);
+            message.channel.send({ embed })
         });
     }
 
