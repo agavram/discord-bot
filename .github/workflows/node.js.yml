@@ -26,7 +26,7 @@ jobs:
     - run: npm run build --if-present
     - name: Deploy to Server
       uses: appleboy/ssh-action@v0.1.2
-      env:
+      with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
