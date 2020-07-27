@@ -25,10 +25,10 @@ jobs:
     - run: npm install
     - run: npm run build --if-present
     - name: Deploy to Server
-      uses: garygrossgarten/github-action-ssh@release
+      uses: appleboy/ssh-action@release
       with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
-          privateKey: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.PORT }}
-          command: cd ${{ secrets.PROJECT_PATH }} && git pull && npm i && npm run build
+          script: cd ${{ secrets.PROJECT_PATH }} && git pull && npm i && npm run build
