@@ -172,10 +172,17 @@ export default class Bot {
         });
 
         command.on("search", async (message: Message) => {
-            const results = await GoogleSearchPlugin.search(message.content);
+            this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
+                if (server.channelGeneral === message.channel.id) {
+                    message.channel.send('no');
+                    return;
+                }
 
-            let embed = new MessageEmbed().addFields(results);
-            message.channel.send({ embed })
+                const results = await GoogleSearchPlugin.search(message.content);
+
+                let embed = new MessageEmbed().addFields(results);
+                message.channel.send({ embed })
+            });
         });
     }
 
