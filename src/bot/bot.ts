@@ -161,7 +161,7 @@ export default class Bot {
                     this.newEvent(parsed.eventTitle, parsed.startDate);
             });
         });
-        
+
         command.on("help", (message: Message) => {
             message.channel.send('<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>')
         });
@@ -205,7 +205,8 @@ export default class Bot {
                 if (user !== null) {
                     try {
                         const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
-                        channel.send(message.content);
+                        const cleaned = message.content.replace('@', '@​');
+                        channel.send(cleaned);
                         message.react('✅');
                     } catch (error) {
                         message.channel.send("An error occurred. Try updating the channel ID.")
