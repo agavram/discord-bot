@@ -3,7 +3,7 @@
 <b>!phonetic I am a beautiful butterfly</b><br>
 Convert text to its phonetic version
 
-<h3> DM the below commands to the bot
+<h3>DM the below commands to the bot</h3>
 
 <b>!channel 602602553125551647</b><br>
 Set the ID for which channel you want anonymous messages to be sent
