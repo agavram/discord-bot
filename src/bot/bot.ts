@@ -161,6 +161,10 @@ export default class Bot {
                     this.newEvent(parsed.eventTitle, parsed.startDate);
             });
         });
+        
+        command.on("help", (message: Message) => {
+            message.channel.send('https://github.com/agavram/Discord_Bot/blob/master/HELP.md')
+        });
 
         command.on("phonetic", (message: Message) => {
             let input = message.content.trim();
