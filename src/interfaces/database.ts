@@ -1,5 +1,5 @@
 export interface server {
-    _id: string,
+    _id?: string,
     server: string,
     channelGeneral: string,
     channelMemes: string,
@@ -12,4 +12,10 @@ export interface event {
     title: string,
     time: Date,
     attendees: Array<string>
+}
+
+export interface user {
+    _id?: string,
+    userId: string,
+    channelAnon: string
 }

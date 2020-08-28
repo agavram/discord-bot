@@ -6,7 +6,7 @@ import { MongoClient, Collection } from "mongodb";
 import { EventEmitter } from "events";
 import { scheduleJob } from "node-schedule";
 import { Data2, Child } from "../interfaces/reddit";
-import { server, event } from "../interfaces/database";
+import { server, event, user } from "../interfaces/database";
 import { ifProd } from "../helpers/functions";
 import axios from "axios";
 import { phonetics } from "../helpers/phonetic-alphabet";
@@ -21,6 +21,7 @@ export default class Bot {
 
     eventsCollection: Collection;
     serversCollection: Collection;
+    usersCollection: Collection;
 
     prefix: string = "!";
     events: Array<event> = [];
@@ -29,6 +30,7 @@ export default class Bot {
 
     constructor() {
         const command = new EventEmitter();
+        const dm = new EventEmitter();
         const reaction = new EventEmitter();
 
         this.Ready = new Promise((resolve, reject) => {
@@ -40,6 +42,7 @@ export default class Bot {
                 }).then(_ => {
                     this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("events");
                     this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("servers");
+                    this.usersCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("users");
                     Promise.allSettled([
                         this.eventsCollection.find({}).toArray().then((docs) => {
                             this.events = docs;
@@ -71,18 +74,23 @@ export default class Bot {
         });
 
         this.client.on("message", message => {
-            if (message.author.bot || message.channel.type.toLowerCase() !== "text")
+            if (message.author.bot)
                 return;
 
             let msg = message.content;
-            if (msg.startsWith(this.prefix)) {
+            if (msg.startsWith(this.prefix))
                 message.content = msg.split(" ").slice(1).join(" ");
-                command.emit(msg.substring(this.prefix.length).split(" ")[0], message);
-            }
+
+            let emitter : EventEmitter;
+            if (message.channel.type.toLowerCase() === "text")
+                emitter = command;
+            else if (message.channel.type.toLowerCase() === "dm")
+                emitter = dm;
+
+            emitter.emit(msg.substring(this.prefix.length).split(" ")[0], message);
         });
 
         ["messageReactionAdd", "messageReactionRemove"].forEach((e) => {
-            //@ts-expect-error
             this.client.on(e, async (messageReaction: MessageReaction, user: User) => {
                 if (messageReaction.message.partial)
                     await messageReaction.message.fetch();
@@ -184,6 +192,33 @@ export default class Bot {
                 message.channel.send({ embed })
             });
         });
+
+        dm.on("anon", async (message: Message) => {
+            this.usersCollection.findOne({userId: message.author.id}).then(async (user: user) => {
+                if (user !== null) {
+                    try {
+                        const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
+                        channel.send(message.content);
+                        message.react('✅');
+                    } catch (error) {
+                        message.channel.send("An error occurred. Try updating the channel ID.")
+                    }
+                } else {
+                    message.channel.send(`Use command ${this.prefix}channel to set the channel ID.`);
+                }
+            });
+        })
+
+        dm.on("channel", async (message: Message) => {
+            const user: user = {
+                userId: message.author.id,
+                channelAnon: message.content
+            }
+
+            this.usersCollection.updateOne({userId: user.userId}, {$set: user}, { upsert: true }).then(_ => {
+                message.channel.send("Channel ID successfully set");
+            })
+        })
     }
 
     private newEvent(title: string, time: Date) {
