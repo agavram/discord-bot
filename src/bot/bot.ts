@@ -60,6 +60,9 @@ export default class Bot {
         });
 
         this.client.on("messageDelete", message => {
+            if (message.channel.type.toLowerCase() != "text")
+                return;
+
             this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
                 if (message.channel.id !== server.channelLogging) {
                     const tc = this.client.channels.resolve(server.channelLogging) as TextChannel;
