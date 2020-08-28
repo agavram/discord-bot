@@ -205,7 +205,7 @@ export default class Bot {
                 if (user !== null) {
                     try {
                         const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
-                        const cleaned = message.content.replace('@', '@​');
+                        const cleaned = message.content.replace(new RegExp('@', 'g'), '@​');
                         channel.send(cleaned);
                         message.react('✅');
                     } catch (error) {
