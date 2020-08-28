@@ -163,7 +163,7 @@ export default class Bot {
         });
         
         command.on("help", (message: Message) => {
-            message.channel.send('https://github.com/agavram/Discord_Bot/blob/master/HELP.md')
+            message.channel.send('<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>')
         });
 
         command.on("phonetic", (message: Message) => {
