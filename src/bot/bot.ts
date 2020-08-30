@@ -80,6 +80,9 @@ export default class Bot {
             if (message.author.bot)
                 return;
 
+            if (message.author.id === "749420465239621675")
+                message.react("downvote")
+
             let msg = message.content;
             if (msg.startsWith(this.prefix))
                 message.content = msg.split(" ").slice(1).join(" ");
@@ -163,7 +166,7 @@ export default class Bot {
         });
 
         command.on("help", (message: Message) => {
-            message.channel.send('<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>')
+            message.channel.send("<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>")
         });
 
         command.on("phonetic", (message: Message) => {
@@ -189,7 +192,7 @@ export default class Bot {
         command.on("search", async (message: Message) => {
             this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
                 if (server.channelGeneral === message.channel.id) {
-                    message.channel.send('no');
+                    message.channel.send("no");
                     return;
                 }
 
@@ -205,9 +208,9 @@ export default class Bot {
                 if (user !== null) {
                     try {
                         const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
-                        const cleaned = message.content.replace(new RegExp('@', 'g'), '@​');
+                        const cleaned = message.content.replace(new RegExp("@", "g"), "@​");
                         channel.send(cleaned);
-                        message.react('✅');
+                        message.react("✅");
                     } catch (error) {
                         message.channel.send("An error occurred. Try updating the channel ID.")
                     }
