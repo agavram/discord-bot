@@ -80,12 +80,11 @@ export default class Bot {
             if (message.author.bot)
                 return;
 
-            if (message.author.id === "749420465239621675")
-                message.react("downvote")
-
             let msg = message.content;
-            if (msg.startsWith(this.prefix))
-                message.content = msg.split(" ").slice(1).join(" ");
+            if (!msg.startsWith(this.prefix))
+                return;
+
+            message.content = msg.split(" ").slice(1).join(" ");
 
             let emitter : EventEmitter;
             if (message.channel.type.toLowerCase() === "text")
