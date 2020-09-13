@@ -28,4 +28,4 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.PORT }}
-          script: cd ${{ secrets.PROJECT_PATH }} && git pull && npm i && npm run build
+          script: cd ${{ secrets.PROJECT_PATH }} && git fetch origin master && git reset --hard origin/master && npm i && npm run build
