@@ -80,6 +80,15 @@ export default class Bot {
             if (message.author.bot)
                 return;
 
+            if (message.author.id === "236895660274614272") {
+                if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content)) {
+                        message.channel.send('Bad Sam. No urls');
+                        message.delete();
+                } else {
+                    message.react('642834455790092318');
+                }
+            }
+
             let msg = message.content;
             if (!msg.startsWith(this.prefix))
                 return;
@@ -87,10 +96,15 @@ export default class Bot {
             message.content = msg.split(" ").slice(1).join(" ");
 
             let emitter : EventEmitter;
-            if (message.channel.type.toLowerCase() === "text")
-                emitter = command;
-            else if (message.channel.type.toLowerCase() === "dm")
-                emitter = dm;
+            switch (message.channel.type.toLowerCase()) {
+                case "text":
+                    emitter = command;
+                    break;
+
+                case "dm":
+                    emitter = dm;
+                    break;
+            }
 
             emitter.emit(msg.substring(this.prefix.length).split(" ")[0], message);
         });
