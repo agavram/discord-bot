@@ -85,6 +85,7 @@ export default class Bot {
                         message.channel.send('Bad Sam no attachments or URLs');
                         message.delete();
                 }
+                return;
             }
 
             let msg = message.content;
