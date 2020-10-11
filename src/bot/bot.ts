@@ -180,6 +180,10 @@ export default class Bot {
         command.on("help", (message: Message) => {
             message.channel.send("<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>")
         });
+        
+        command.on("die", (message: Message) => {
+            message.channel.send("ok you are dead");
+        });
 
         command.on("phonetic", (message: Message) => {
             let input = message.content.trim();
