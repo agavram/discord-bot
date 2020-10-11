@@ -90,11 +90,14 @@ export default class Bot {
             // }
 
             let msg = message.content;
-            if (!msg.startsWith(this.prefix))
-                return;
             
             if (msg.toLowerCase().includes("uwu"))
                 message.channel.send("stop");
+            
+            if (!msg.startsWith(this.prefix))
+                return;
+
+
 
             message.content = msg.split(" ").slice(1).join(" ");
 
