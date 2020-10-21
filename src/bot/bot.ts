@@ -191,6 +191,24 @@ export default class Bot {
         command.on("die", (message: Message) => {
             message.channel.send("ok you are dead");
         });
+        
+        command.on("poll", (message: Message) => {
+            const parsed = parse(message.content);
+            let embed = { title: parsed.eventTitle, fields: [] };
+
+            message.channel.send({ embed }).then(sent => {
+                sent.react("1️⃣");
+                sent.react("2️⃣");
+                sent.react("3️⃣");
+                sent.react("4️⃣");
+                sent.react("5️⃣");
+                sent.react("6️⃣");
+                sent.react("7️⃣");
+                sent.react("8️⃣");
+                sent.react("9️⃣");
+                sent.react("🔟");
+            });
+        });
 
         command.on("phonetic", (message: Message) => {
             let input = message.content.trim();
