@@ -193,9 +193,8 @@ export default class Bot {
         });
         
         command.on("poll", (message: Message) => {
-            const parsed = parse(message.content);
-            let embed = { title: parsed.eventTitle, fields: [] };
-
+            let embed = { title: message.content, fields: [] };
+            
             message.channel.send({ embed }).then(sent => {
                 sent.react("1️⃣");
                 sent.react("2️⃣");
