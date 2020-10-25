@@ -339,7 +339,11 @@ export default class Bot {
             const index = this.events.findIndex(e => e.time === time);
 
             this.events[index].attendees.forEach(attendee => {
-                this.client.users.resolve(attendee).send(this.events[index].title + " is happening right now");
+                try {
+                    this.client.users.resolve(attendee).send(this.events[index].title + " is happening right now");
+                } catch (error) {
+                    console.log("Failed to DM: " + attendee);
+                }
             });
 
             this.eventsCollection.deleteOne({ "time": time });
