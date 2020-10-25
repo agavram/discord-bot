@@ -83,7 +83,7 @@ export default class Bot {
 
             if (message.author.id === "347461045217918977") {
                 if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0) {
-                        message.channel.send('Bad TJ no attachments or URLs');
+                        message.author.send('Bad no attachments or URLs');
                         message.delete();
                         return;
                 }
@@ -241,22 +241,22 @@ export default class Bot {
             });
         });
 
-        dm.on("anon", async (message: Message) => {
-            this.usersCollection.findOne({userId: message.author.id}).then(async (user: user) => {
-                if (user !== null) {
-                    try {
-                        const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
-                        const cleaned = message.content.replace(new RegExp("@", "g"), "@​");
-                        channel.send(cleaned);
-                        message.react("✅");
-                    } catch (error) {
-                        message.channel.send("An error occurred. Try updating the channel ID.")
-                    }
-                } else {
-                    message.channel.send(`Use command ${this.prefix}channel to set the channel ID.`);
-                }
-            });
-        })
+        // dm.on("anon", async (message: Message) => {
+        //     this.usersCollection.findOne({userId: message.author.id}).then(async (user: user) => {
+        //         if (user !== null) {
+        //             try {
+        //                 const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
+        //                 const cleaned = message.content.replace(new RegExp("@", "g"), "@​");
+        //                 channel.send(cleaned);
+        //                 message.react("✅");
+        //             } catch (error) {
+        //                 message.channel.send("An error occurred. Try updating the channel ID.")
+        //             }
+        //         } else {
+        //             message.channel.send(`Use command ${this.prefix}channel to set the channel ID.`);
+        //         }
+        //     });
+        // })
 
         dm.on("channel", async (message: Message) => {
             const user: user = {
