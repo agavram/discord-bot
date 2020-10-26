@@ -91,7 +91,7 @@ export default class Bot {
 
             let msg = message.content;
             
-            if (msg.toLowerCase().includes("uwu"))
+            if (msg.toLowerCase().includes("uwu") || msg.toLowerCase().includes("owo"))
                 message.channel.send("stop");
             
             if (!msg.startsWith(this.prefix))
