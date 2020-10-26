@@ -81,7 +81,7 @@ export default class Bot {
             if (message.author.bot)
                 return;
 
-            if (message.author.id === "347461045217918977") {
+            if (message.author.id === "347461045217918977" || message.author.id === "236895660274614272") {
                 if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0) {
                         message.author.send('Bad no attachments or URLs');
                         message.delete();
