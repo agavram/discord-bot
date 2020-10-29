@@ -40,9 +40,10 @@ export default class Bot {
                 MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
                     this.mongoClient = client;
                 }).then(_ => {
-                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("events");
-                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("servers");
-                    this.usersCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("users");
+                    const dbName: string = ifProd() ? "discord_bot" : "discord_bot_testing";
+                    this.eventsCollection = this.mongoClient.db(dbName).collection("events");
+                    this.serversCollection = this.mongoClient.db(dbName).collection("servers");
+                    this.usersCollection = this.mongoClient.db(dbName).collection("users");
                     Promise.allSettled([
                         this.eventsCollection.find({}).toArray().then((docs) => {
                             this.events = docs;
