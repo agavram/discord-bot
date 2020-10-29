@@ -74,21 +74,26 @@ export default class Bot {
                     tc.send("Content: " + message.content);
                 }
             });
+            
         });
 
         this.client.on("message", message => {
             if (message.author.bot)
                 return;
 
-            // if (message.author.id === "236895660274614272") {
-            //     if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0) {
-            //             message.channel.send('Bad Sam no attachments or URLs');
-            //             message.delete();
-            //             return;
-            //     }
-            // }
+            if (message.author.id === "347461045217918977" || message.author.id === "236895660274614272") {
+                if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0) {
+                        message.author.send('Bad no attachments or URLs');
+                        message.delete();
+                        return;
+                }
+            }
 
             let msg = message.content;
+            
+            if (msg.toLowerCase().includes("uwu") || msg.toLowerCase().includes("owo"))
+                message.channel.send("stop");
+            
             if (!msg.startsWith(this.prefix))
                 return;
 
@@ -180,6 +185,36 @@ export default class Bot {
         command.on("help", (message: Message) => {
             message.channel.send("<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>")
         });
+        
+        command.on("die", (message: Message) => {
+            message.channel.send("ok you are dead");
+        });
+        
+        command.on("poll", (message: Message) => {
+            let embed = { title: message.content, fields: [] };
+            
+            message.channel.send({ embed }).then(sent => {
+                sent.react("1️⃣");
+                sent.react("2️⃣");
+                sent.react("3️⃣");
+                sent.react("4️⃣");
+                sent.react("5️⃣");
+                sent.react("6️⃣");
+                sent.react("7️⃣");
+                sent.react("8️⃣");
+                sent.react("9️⃣");
+                sent.react("🔟");
+            });
+        });
+        
+        command.on("vote", (message: Message) => {
+            let embed = { title: message.content, fields: [] };
+            
+            message.channel.send({ embed }).then(sent => {
+                sent.react("✅");
+                sent.react("❌");
+            });
+        });
 
         command.on("phonetic", (message: Message) => {
             let input = message.content.trim();
@@ -215,22 +250,22 @@ export default class Bot {
             });
         });
 
-        dm.on("anon", async (message: Message) => {
-            this.usersCollection.findOne({userId: message.author.id}).then(async (user: user) => {
-                if (user !== null) {
-                    try {
-                        const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
-                        const cleaned = message.content.replace(new RegExp("@", "g"), "@​");
-                        channel.send(cleaned);
-                        message.react("✅");
-                    } catch (error) {
-                        message.channel.send("An error occurred. Try updating the channel ID.")
-                    }
-                } else {
-                    message.channel.send(`Use command ${this.prefix}channel to set the channel ID.`);
-                }
-            });
-        })
+        // dm.on("anon", async (message: Message) => {
+        //     this.usersCollection.findOne({userId: message.author.id}).then(async (user: user) => {
+        //         if (user !== null) {
+        //             try {
+        //                 const channel = this.client.channels.resolve(user.channelAnon) as TextChannel;
+        //                 const cleaned = message.content.replace(new RegExp("@", "g"), "@​");
+        //                 channel.send(cleaned);
+        //                 message.react("✅");
+        //             } catch (error) {
+        //                 message.channel.send("An error occurred. Try updating the channel ID.")
+        //             }
+        //         } else {
+        //             message.channel.send(`Use command ${this.prefix}channel to set the channel ID.`);
+        //         }
+        //     });
+        // })
 
         dm.on("channel", async (message: Message) => {
             const user: user = {
@@ -313,7 +348,11 @@ export default class Bot {
             const index = this.events.findIndex(e => e.time === time);
 
             this.events[index].attendees.forEach(attendee => {
-                this.client.users.resolve(attendee).send(this.events[index].title + " is happening right now");
+                try {
+                    this.client.users.resolve(attendee).send(this.events[index].title + " is happening right now");
+                } catch (error) {
+                    console.log("Failed to DM: " + attendee);
+                }
             });
 
             this.eventsCollection.deleteOne({ "time": time });
