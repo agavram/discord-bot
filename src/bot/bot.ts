@@ -206,6 +206,15 @@ export default class Bot {
                 sent.react("🔟");
             });
         });
+        
+        command.on("vote", (message: Message) => {
+            let embed = { title: message.content, fields: [] };
+            
+            message.channel.send({ embed }).then(sent => {
+                sent.react("✅");
+                sent.react("❌");
+            });
+        });
 
         command.on("phonetic", (message: Message) => {
             let input = message.content.trim();
