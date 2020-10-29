@@ -150,6 +150,7 @@ export default class Bot {
             });
         });
 
+        
         reaction.on("✅", (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
             let embed = reaction.message.embeds[0];
             if (!embed.title || !embed.title.startsWith("​")) return;
