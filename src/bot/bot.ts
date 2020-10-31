@@ -54,6 +54,11 @@ export default class Bot {
                             scheduleJob("0,30 * * * *", () => {
                                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
                             });
+
+                            scheduleJob("0 0 * * *", () => {
+                                this.usersCollection.deleteMany({});
+                            });
+
                             resolve();
                         });
                     });
@@ -81,13 +86,33 @@ export default class Bot {
             if (message.author.bot)
                 return;
 
-            if (message.author.id === "347461045217918977" || message.author.id === "236895660274614272") {
-                if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0) {
-                    message.author.send('Bad no attachments or URLs');
-                    message.delete();
+            //  Sam and TJ
+            let badPeople = ["347461045217918977", "236895660274614272"];
+            if ((new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0)) {
+
+                let badPerson = badPeople.find(badPerson => badPerson === message.author.id);
+
+                if (badPerson === undefined)
                     return;
-                }
+
+                this.usersCollection.findOne({ "userId": badPerson }).then(async (user: user) => {
+                    if (user === null || user.sentAttachments === undefined) {
+                        user = {
+                            userId: badPerson,
+                            sentAttachments: 0
+                        };
+                    }
+                    user.sentAttachments += 1;
+
+                    if (user.sentAttachments > 3) {
+                        message.author.send('Bad no more attachments or URLs');
+                        message.delete();
+                    } else {
+                        this.usersCollection.updateOne({ "userId": badPerson }, { $set: user }, { upsert: true });
+                    }
+                });
             }
+
 
             let msg = message.content;
 
@@ -150,7 +175,6 @@ export default class Bot {
             });
         });
 
-        
         reaction.on("✅", (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
             let embed = reaction.message.embeds[0];
             if (!embed.title || !embed.title.startsWith("​")) return;

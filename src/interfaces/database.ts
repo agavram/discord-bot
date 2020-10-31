@@ -17,5 +17,6 @@ export interface event {
 export interface user {
     _id?: string,
     userId: string,
-    channelAnon: string
+    channelAnon?: string,
+    sentAttachments?: number
 }
