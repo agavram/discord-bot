@@ -56,7 +56,7 @@ export default class Bot {
                             });
 
                             scheduleJob("0 0 * * *", () => {
-                                this.usersCollection.deleteMany({});
+                                this.usersCollection.updateMany({},  { $set: { sentAttachments: 0} });
                             });
 
                             resolve();
