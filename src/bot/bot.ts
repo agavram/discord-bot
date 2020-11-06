@@ -40,9 +40,10 @@ export default class Bot {
                 MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
                     this.mongoClient = client;
                 }).then(_ => {
-                    this.eventsCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("events");
-                    this.serversCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("servers");
-                    this.usersCollection = this.mongoClient.db(ifProd() ? "discord_bot" : "discord_bot_testing").collection("users");
+                    const dbName: string = ifProd() ? "discord_bot" : "discord_bot_testing";
+                    this.eventsCollection = this.mongoClient.db(dbName).collection("events");
+                    this.serversCollection = this.mongoClient.db(dbName).collection("servers");
+                    this.usersCollection = this.mongoClient.db(dbName).collection("users");
                     Promise.allSettled([
                         this.eventsCollection.find({}).toArray().then((docs) => {
                             this.events = docs;
@@ -53,6 +54,11 @@ export default class Bot {
                             scheduleJob("0,30 * * * *", () => {
                                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
                             });
+
+                            scheduleJob("0 0 * * *", () => {
+                                this.usersCollection.updateMany({},  { $set: { sentAttachments: 0} });
+                            });
+
                             resolve();
                         });
                     });
@@ -74,32 +80,51 @@ export default class Bot {
                     tc.send("Content: " + message.content);
                 }
             });
-            
         });
 
         this.client.on("message", message => {
             if (message.author.bot)
                 return;
 
-            if (message.author.id === "347461045217918977" || message.author.id === "236895660274614272") {
-                if (new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0) {
-                        message.author.send('Bad no attachments or URLs');
+            //  Sam and TJ
+            let badPeople = ["347461045217918977"];
+            if ((new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0)) {
+
+                let badPerson = badPeople.find(badPerson => badPerson === message.author.id);
+
+                if (badPerson === undefined)
+                    return;
+
+                this.usersCollection.findOne({ "userId": badPerson }).then(async (user: user) => {
+                    if (user === null || user.sentAttachments === undefined) {
+                        user = {
+                            userId: badPerson,
+                            sentAttachments: 0
+                        };
+                    }
+                    user.sentAttachments += 1;
+
+                    if (user.sentAttachments > 3) {
+                        message.author.send('Bad no more attachments or URLs');
                         message.delete();
-                        return;
-                }
+                    } else {
+                        this.usersCollection.updateOne({ "userId": badPerson }, { $set: user }, { upsert: true });
+                    }
+                });
             }
 
+
             let msg = message.content;
-            
+
             if (msg.toLowerCase().includes("uwu") || msg.toLowerCase().includes("owo"))
                 message.channel.send("stop");
-            
+
             if (!msg.startsWith(this.prefix))
                 return;
 
             message.content = msg.split(" ").slice(1).join(" ");
 
-            let emitter : EventEmitter;
+            let emitter: EventEmitter;
             switch (message.channel.type.toLowerCase()) {
                 case "text":
                     emitter = command;
@@ -150,10 +175,9 @@ export default class Bot {
             });
         });
 
-        
         reaction.on("✅", (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
             let embed = reaction.message.embeds[0];
-            if (embed.author) return;
+            if (!embed.title || !embed.title.startsWith("​")) return;
 
             if (event === "messageReactionAdd")
                 embed.fields.push({ name: "Attendee", value: guild.member(user).displayName, inline: false });
@@ -174,7 +198,9 @@ export default class Bot {
             const parsed = parse(message.content);
 
             // Generate the embed to post to discord
-            let embed = { title: parsed.eventTitle, fields: [], timestamp: new Date(parsed.startDate).valueOf() };
+            let embed = new MessageEmbed()
+                .setTitle("​" + parsed.eventTitle)
+                .setTimestamp(new Date(parsed.startDate).valueOf());
 
             message.channel.send({ embed }).then(sent => {
                 sent.react("✅");
@@ -184,16 +210,16 @@ export default class Bot {
         });
 
         command.on("help", (message: Message) => {
-            message.channel.send("<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>")
+            message.channel.send("<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>");
         });
-        
+
         command.on("die", (message: Message) => {
             message.channel.send("ok you are dead");
         });
-        
+
         command.on("poll", (message: Message) => {
-            let embed = { title: message.content, fields: [] };
-            
+            let embed = new MessageEmbed().setTitle(message.content);
+
             message.channel.send({ embed }).then(sent => {
                 sent.react("1️⃣");
                 sent.react("2️⃣");
@@ -207,10 +233,10 @@ export default class Bot {
                 sent.react("🔟");
             });
         });
-        
+
         command.on("vote", (message: Message) => {
-            let embed = { title: message.content, fields: [] };
-            
+            let embed = new MessageEmbed().setTitle(message.content);
+
             message.channel.send({ embed }).then(sent => {
                 sent.react("✅");
                 sent.react("❌");
@@ -247,7 +273,7 @@ export default class Bot {
                 const results = await GoogleSearchPlugin.search(message.content);
 
                 let embed = new MessageEmbed().addFields(results);
-                message.channel.send({ embed })
+                message.channel.send({ embed });
             });
         });
 
@@ -272,12 +298,12 @@ export default class Bot {
             const user: user = {
                 userId: message.author.id,
                 channelAnon: message.content
-            }
+            };
 
-            this.usersCollection.updateOne({userId: user.userId}, {$set: user}, { upsert: true }).then(_ => {
+            this.usersCollection.updateOne({ userId: user.userId }, { $set: user }, { upsert: true }).then(_ => {
                 message.channel.send("Channel ID successfully set");
-            })
-        })
+            });
+        });
     }
 
     private newEvent(title: string, time: Date) {
