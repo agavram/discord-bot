@@ -153,6 +153,9 @@ export default class Bot {
             if (event !== "messageReactionAdd" || !embed.author) return;
 
             this.serversCollection.findOne({ "server": reaction.message.guild.id }).then((server: server) => {
+                if (reaction.message.channel.id !== server.channelMemes)
+                    return;
+
                 const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
                 tc.messages.fetch({ limit: 100 }).then((messages) => {
                     if (messages.find(msg => {
