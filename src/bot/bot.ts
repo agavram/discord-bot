@@ -65,22 +65,22 @@ export default class Bot {
                 });
         });
 
-        this.client.on("messageDelete", message => {
-            if (message.channel.type.toLowerCase() != "text")
-                return;
+        // this.client.on("messageDelete", message => {
+        //     if (message.channel.type.toLowerCase() != "text")
+        //         return;
 
-            this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
-                if (message.channel.id !== server.channelLogging) {
-                    const tc = this.client.channels.resolve(server.channelLogging) as TextChannel;
+        //     this.serversCollection.findOne({ "server": message.guild.id }).then(async (server: server) => {
+        //         if (message.channel.id !== server.channelLogging) {
+        //             const tc = this.client.channels.resolve(server.channelLogging) as TextChannel;
 
-                    if (message.author.partial)
-                        await message.author.fetch();
+        //             if (message.author.partial)
+        //                 await message.author.fetch();
 
-                    tc.send(message.author.username);
-                    tc.send("Content: " + message.content);
-                }
-            });
-        });
+        //             tc.send(message.author.username);
+        //             tc.send("Content: " + message.content);
+        //         }
+        //     });
+        // });
 
         this.client.on("message", message => {
             if (message.author.bot)
