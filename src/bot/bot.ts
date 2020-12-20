@@ -69,34 +69,6 @@ export default class Bot {
             if (message.author.bot)
                 return;
 
-            //  Sam and TJ
-            let badPeople = [];
-            if ((new RegExp("([a-zA-Z0-9]+://)?([a-zA-Z0-9_]+:[a-zA-Z0-9_]+@)?([a-zA-Z0-9.-]+\\.[A-Za-z]{2,4})(:[0-9]+)?(/.*)?").test(message.content) || message.attachments.size != 0)) {
-
-                let badPerson = badPeople.find(badPerson => badPerson === message.author.id);
-
-                if (badPerson === undefined)
-                    return;
-
-                this.usersCollection.findOne({ "userId": badPerson }).then(async (user: user) => {
-                    if (user === null || user.sentAttachments === undefined) {
-                        user = {
-                            userId: badPerson,
-                            sentAttachments: 0
-                        };
-                    }
-                    user.sentAttachments += 1;
-
-                    if (user.sentAttachments > 3) {
-                        message.author.send('Bad no more attachments or URLs');
-                        message.delete();
-                    } else {
-                        this.usersCollection.updateOne({ "userId": badPerson }, { $set: user }, { upsert: true });
-                    }
-                });
-            }
-
-
             let msg = message.content;
 
             if (!msg.startsWith(this.prefix))
