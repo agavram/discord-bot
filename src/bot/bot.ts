@@ -273,6 +273,7 @@ export default class Bot {
                 if (server.posts.includes(post.id) || post.stickied || post.author === "idea4granted")
                     continue;
 
+                // The list does not need to hold memes more than a day old
                 if (server.posts.length > 48)
                     server.posts.shift();
 
