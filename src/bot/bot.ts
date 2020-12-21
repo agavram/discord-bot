@@ -12,6 +12,7 @@ import axios from "axios";
 import { phonetics } from "../helpers/phonetic-alphabet";
 import { parse } from "sherlockjs";
 import { GoogleSearchPlugin } from "../plugins/google";
+import { LatexConverter } from "../plugins/latex";
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -171,6 +172,10 @@ export default class Bot {
         command.on("die", (message: Message) => {
             message.channel.send("ok you are dead");
         });
+
+        command.on("latex", async (message: Message) => {
+            message.channel.send({files: [await LatexConverter.convert(message.content)]})
+        })
 
         command.on("poll", (message: Message) => {
             let embed = new MessageEmbed().setTitle(message.content);
