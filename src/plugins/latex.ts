@@ -8,7 +8,7 @@ export class LatexConverter {
                 math: `\\color{white}{${latex}}`,
                 format: 'TeX',
                 png: true,
-                scale: 2
+                scale: 3
             };
 
 
