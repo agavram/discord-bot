@@ -57,7 +57,7 @@ export default class Bot {
                             });
 
                             scheduleJob("0 0 * * *", () => {
-                                this.usersCollection.updateMany({},  { $set: { sentAttachments: 0} });
+                                this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
                             });
 
                             resolve();
@@ -174,8 +174,8 @@ export default class Bot {
         });
 
         command.on("latex", async (message: Message) => {
-            message.channel.send({files: [await LatexConverter.convert(message.content)]})
-        })
+            message.channel.send({ files: [await LatexConverter.convert(message.content)] });
+        });
 
         command.on("poll", (message: Message) => {
             let embed = new MessageEmbed().setTitle(message.content);
@@ -286,7 +286,7 @@ export default class Bot {
                 this.serversCollection.updateOne({ "_id": server._id }, { $set: { posts: server.posts } });
 
                 // Attempt to get an image
-                let mediaUrl: string = post.media == null ? post.url : post.media.oembed.thumbnail_url;
+                let mediaUrl: string = post.url;
 
                 // Generate the embed to post to discord
                 let embed = new MessageEmbed()

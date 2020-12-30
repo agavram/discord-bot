@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/app.ts",
   "scripts": {
-    "deploy": "tsc && nodemon dist/app",
+    "deploy": "tsc && pm2 start dist/app.js",
     "dev": "ts-node-dev --files src/app.ts",
     "build": "tsc"
   },
