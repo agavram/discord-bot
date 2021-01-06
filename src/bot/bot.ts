@@ -113,13 +113,15 @@ export default class Bot {
                     return;
 
                 const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
-                tc.messages.fetch({ limit: 100 }).then((messages) => {
+                tc.messages.fetch({ limit: 100 }).then(async (messages) => {
                     if (messages.find(msg => {
                         if (msg.embeds.length > 0)
                             return msg.embeds[0].url === embed.url;
                     }))
                         return false;
 
+                    if (user.partial)
+                        await user.fetch();
                     embed.setFooter(guild.member(user).displayName + " shared this meme");
 
                     tc.send({ embed }).then(() => {
