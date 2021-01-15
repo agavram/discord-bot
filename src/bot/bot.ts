@@ -196,6 +196,12 @@ export default class Bot {
             });
         });
 
+        command.on("sendmeme", (message: Message) => {
+            if (message.author.id === "213720243057590274") {
+                this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
+            }
+        });
+
         command.on("vote", (message: Message) => {
             let embed = new MessageEmbed().setTitle(message.content);
 
