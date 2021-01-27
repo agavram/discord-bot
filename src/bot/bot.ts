@@ -180,10 +180,11 @@ export default class Bot {
         });
 
         command.on("poll", (message: Message) => {
-            const regex = /{(\d+)}(.*)/;
-            const found = message.content.match(regex);
+            const found = message.content.match(/{(\d+)}(.*)/);
+
             let pollSize: number;
             let title: string;
+
             if (found == null) {
                 pollSize = 10;
                 title = message.content;
@@ -191,10 +192,11 @@ export default class Bot {
                 pollSize = parseInt(found[1]);
                 title = found[2];
             }
+            
             let embed = new MessageEmbed().setTitle(title);
             var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
             message.channel.send({ embed }).then(sent => {
-                for (let i = 0; i < pollSize; i++) {
+                for (let i = 0; i < Math.min(pollSize, 10); i++) {
                     sent.react(emoteList[i]);
                 }
             });
