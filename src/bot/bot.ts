@@ -180,19 +180,23 @@ export default class Bot {
         });
 
         command.on("poll", (message: Message) => {
-            let embed = new MessageEmbed().setTitle(message.content);
-
+            const regex = /{(\d+)}(.*)/;
+            const found = message.match(regex);
+            let pollSize: number;
+            let title: string;
+            if (found == null) {
+                pollSize = 10;
+                title = message.content;
+            } else {
+                pollSize = parseInt(found[1]);
+                title = found[2];
+            }
+            let embed = new MessageEmbed().setTitle(title);
+            var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
             message.channel.send({ embed }).then(sent => {
-                sent.react("1️⃣");
-                sent.react("2️⃣");
-                sent.react("3️⃣");
-                sent.react("4️⃣");
-                sent.react("5️⃣");
-                sent.react("6️⃣");
-                sent.react("7️⃣");
-                sent.react("8️⃣");
-                sent.react("9️⃣");
-                sent.react("🔟");
+                for (let i = 0; i < pollSize; i++) {
+                    sent.react(emoteList[i]);
+                }
             });
         });
 
