@@ -189,6 +189,10 @@ export default class Bot {
                 title = message.content;
             } else {
                 pollSize = parseInt(found[1]);
+                if (pollSize > 10){
+                    message.channel.send("Don't lag me out you fucking idiot");
+                    pollSize = 10;
+                }
                 title = found[2];
             }
             let embed = new MessageEmbed().setTitle(title);
