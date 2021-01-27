@@ -192,13 +192,45 @@ export default class Bot {
                 pollSize = parseInt(found[1]);
                 title = found[2];
             }
-            
+
             let embed = new MessageEmbed().setTitle(title);
-            var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+            var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
             message.channel.send({ embed }).then(sent => {
                 for (let i = 0; i < Math.min(pollSize, 10); i++) {
                     sent.react(emoteList[i]);
                 }
+            });
+        });
+
+        command.on("purge", (message: Message) => {
+            if (message.author.id !== "213720243057590274")
+                return;
+
+            const [first, second] = message.content.split(" ");
+            let [userId] = first.match(/[0-9]+/);
+
+            const tc = message.channel as TextChannel;
+            let messagesToDelete;
+            tc.messages.fetch({ limit: 100 }).then(async (messages) => {
+                // messages = messages.filter(message => message.author.id === )
+                let previous = undefined;
+                messages.delete(messages.firstKey());
+                messagesToDelete = messages.filter(message => {
+                    if (message.author.id !== userId && previous != undefined) {
+                        previous = false;
+                    }
+                    if (previous != undefined && !previous) {
+                        return false;
+                    }
+                    if (message.author.id === userId) {
+                        previous = true;
+                        return true;
+                    }
+                    return false;
+                });
+            }).then(() => {
+                tc.bulkDelete(messagesToDelete)
+                message.delete();
             });
         });
 
