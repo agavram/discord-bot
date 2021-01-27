@@ -181,7 +181,7 @@ export default class Bot {
 
         command.on("poll", (message: Message) => {
             const regex = /{(\d+)}(.*)/;
-            const found = message.match(regex);
+            const found = message.content.match(regex);
             let pollSize: number;
             let title: string;
             if (found == null) {
