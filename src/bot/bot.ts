@@ -13,6 +13,7 @@ import { phonetics } from "../helpers/phonetic-alphabet";
 import { parse } from "sherlockjs";
 import { GoogleSearchPlugin } from "../plugins/google";
 import { LatexConverter } from "../plugins/latex";
+import { RobinHoodPlugin } from "../plugins/ticker";
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -281,6 +282,11 @@ export default class Bot {
                 let embed = new MessageEmbed().addFields(results);
                 message.channel.send({ embed });
             });
+        });
+
+        command.on("ticker", async (message: Message) => {
+            const image = await RobinHoodPlugin.fetchTicker(message.content);
+            message.channel.send({files: [image]})
         });
 
         dm.on("channel", async (message: Message) => {
