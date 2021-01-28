@@ -16,7 +16,7 @@ export class RobinHoodPlugin {
             await page.waitForSelector('.item-3cgIlGYO');
             const [selection] = (await page.$x(`//div[contains(@class, 'item-3cgIlGYO') and contains(., "${timeLength}")]`));
             await selection.click();
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
             await page.mouse.move(0, 0);
     
             image = await ticker.screenshot();
