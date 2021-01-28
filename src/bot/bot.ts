@@ -286,7 +286,7 @@ export default class Bot {
 
         command.on("ticker", async (message: Message) => {
             const [query, timeLength] = message.content.split(" ");
-            const image = await RobinHoodPlugin.fetchTicker(query, timeLength.toUpperCase());
+            const image = await RobinHoodPlugin.fetchTicker(query, timeLength && timeLength.toUpperCase());
             message.channel.send({files: [image]})
         });
 

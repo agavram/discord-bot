@@ -10,8 +10,14 @@ export class RobinHoodPlugin {
 
         const ticker = await page.$('._3ZzTswmGTiUT4AhIhKZfZh')
 
-        const [selection] = (await page.$x(`//span[contains(text(), "${timeLength}")]/../..`));
-        selection.click();
+        if (timeLength) {
+            const [selection] = (await page.$x(`//span[contains(text(), "${timeLength}")]/../..`));
+            selection.click();
+            
+            await page.waitForResponse(response => {
+                return response.url().includes("crumbs.robinhood.com/trackv2");
+            })
+        }
 
         const image = await ticker.screenshot();
 
