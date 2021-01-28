@@ -1,10 +1,11 @@
 import * as puppeteer from "puppeteer";
 import { load } from "cheerio";
 import { EmbedFieldData } from "discord.js";
+import { PuppeteerBrowser } from "./chrome";
 
 export class GoogleSearchPlugin {
     public static async search(query: string) {
-        const browser = await puppeteer.launch({ headless: true });
+        const browser = await PuppeteerBrowser.getInstance();
 
         const page = await browser.newPage();
 
@@ -20,7 +21,7 @@ export class GoogleSearchPlugin {
             results.push({name: $(element).text(), value: $(element.parent).attr('href')})
         });
     
-        await browser.close();
+        page.close();
         return results;
     }
 }

@@ -1,27 +1,29 @@
 import * as puppeteer from "puppeteer";
 
 export class RobinHoodPlugin {
-    public static async fetchTicker(query: string, timeLength: string) {
+    public static async fetchTicker(query: string, timeLength: string = "1D") {
         const browser = await puppeteer.launch({ headless: true });
-
         const page = await browser.newPage();
-        await page.goto(encodeURI('https://robinhood.com/stocks/' + query));
-        await page.waitForSelector('._3ZzTswmGTiUT4AhIhKZfZh');
+        await page.setViewport({ width: 960, height: 540, deviceScaleFactor:2 })
+        await page.goto(encodeURI('https://www.tradingview.com/symbols/' + query));
 
-        const ticker = await page.$('._3ZzTswmGTiUT4AhIhKZfZh')
+        let image;
+        try {
+            await page.waitForSelector('.js-feed__item.tv-feed-widget-chart.js-feed__item--inited ');
 
-        if (timeLength) {
-            const [selection] = (await page.$x(`//span[contains(text(), "${timeLength}")]/../..`));
-            selection.click();
-            
-            await page.waitForResponse(response => {
-                return response.url().includes("crumbs.robinhood.com/trackv2");
-            })
+            const ticker = await page.$('.js-feed__item.tv-feed-widget-chart.js-feed__item--inited ')
+    
+            await page.waitForSelector('.item-3cgIlGYO');
+            const [selection] = (await page.$x(`//div[contains(@class, 'item-3cgIlGYO') and contains(., "${timeLength}")]`));
+            await selection.click();
+            await page.mouse.move(0, 0);
+    
+            image = await ticker.screenshot();
+        } catch (e) {
+            console.error(e);
         }
 
-        const image = await ticker.screenshot();
-
-        await browser.close();
+        page.close(); 
         return image;
     }
 }
