@@ -73,6 +73,9 @@ export default class Bot {
 
             let msg = message.content;
 
+            if (msg.toLowerCase() === "sigh")
+                message.channel.send("le sigh")
+
             if (!msg.startsWith(this.prefix))
                 return;
 
