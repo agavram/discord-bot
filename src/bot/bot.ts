@@ -256,8 +256,10 @@ export default class Bot {
                     source
                 })
                 .then(res => {
+                    let output = res.data.output;
+                    output = output.split("\n").slice(0, 20).join("\n");
                     let embed = new MessageEmbed().setTitle("Output:");
-                    embed.setDescription("```\n" + res.data.output + "\n```");
+                    embed.setDescription("```\n" + output + "\n```");
                     message.channel.send(embed);
                 })
                 .catch(error => {
