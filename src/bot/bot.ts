@@ -230,10 +230,42 @@ export default class Bot {
                     return false;
                 });
             }).then(() => {
-                tc.bulkDelete(messagesToDelete)
+                tc.bulkDelete(messagesToDelete);
                 message.delete();
             });
         });
+
+        command.on("run", (message: Message) => {
+            let lines = message.content.split("\n");
+
+            let language = lines[0];
+
+            // Remove language
+            lines.shift();
+            // Remove first backticks
+            lines.shift();
+
+            // Remove last backticks
+            lines.pop();
+
+            let source = lines.join("\n");
+
+            axios.post('https://emkc.org/api/v1/piston/execute',
+                {
+                    language,
+                    source
+                })
+                .then(res => {
+                    console.log(res.data);
+                    let embed = new MessageEmbed().setTitle("Output:");
+                    embed.setDescription("```\n" + res.data.output + "\n```");
+                    message.channel.send(embed);
+                })
+                .catch(error => {
+                    message.channel.send(error.data.message);
+                });
+        });
+
 
         command.on("sendmeme", (message: Message) => {
             if (message.author.id === "213720243057590274") {
@@ -288,7 +320,7 @@ export default class Bot {
             const [query, timeLength] = message.content.split(" ");
             const image = await RobinHoodPlugin.fetchTicker(query, timeLength && timeLength.toUpperCase());
             if (image) {
-                message.channel.send({files: [image]})
+                message.channel.send({ files: [image] });
             }
         });
 
