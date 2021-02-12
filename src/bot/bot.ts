@@ -256,7 +256,6 @@ export default class Bot {
                     source
                 })
                 .then(res => {
-                    console.log(res.data);
                     let embed = new MessageEmbed().setTitle("Output:");
                     embed.setDescription("```\n" + res.data.output + "\n```");
                     message.channel.send(embed);
