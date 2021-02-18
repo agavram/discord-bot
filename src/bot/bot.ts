@@ -177,6 +177,7 @@ export default class Bot {
         });
 
         command.on("latex", async (message: Message) => {
+            message.content = message.content.replace(/`/g, "");
             message.channel.send({ files: [await LatexConverter.convert(message.content)] });
         });
 
