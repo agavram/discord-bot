@@ -243,11 +243,7 @@ export default class Bot {
 
             // Remove language
             lines.shift();
-            // Remove first backticks
-            lines.shift();
-
-            // Remove last backticks
-            lines.pop();
+            message.content = message.content.replace(/`/g, "");
 
             let source = lines.join("\n");
 
