@@ -237,13 +237,14 @@ export default class Bot {
         });
 
         command.on("run", (message: Message) => {
+            message.content = message.content.replace(/`/g, "");
+
             let lines = message.content.split("\n");
 
             let language = lines[0];
 
             // Remove language
             lines.shift();
-            message.content = message.content.replace(/`/g, "");
 
             let source = lines.join("\n");
 
