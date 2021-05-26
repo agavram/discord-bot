@@ -1,3 +1,3 @@
-export function ifProd() {
+export function isProd() {
     return process.env.PROD == 'true';
 }

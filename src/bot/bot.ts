@@ -7,7 +7,7 @@ import { EventEmitter } from "events";
 import { scheduleJob } from "node-schedule";
 import { Data2, Child } from "../interfaces/reddit";
 import { server, event, user } from "../interfaces/database";
-import { ifProd } from "../helpers/functions";
+import { isProd } from "../helpers/functions";
 import axios from "axios";
 import { phonetics } from "../helpers/phonetic-alphabet";
 import { parse } from "sherlockjs";
@@ -37,12 +37,12 @@ export default class Bot {
 
         this.Ready = new Promise((resolve, reject) => {
             this.client = new Client({ partials: ["MESSAGE", "REACTION"] });
-            this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
+            this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
 
                 MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
                     this.mongoClient = client;
                 }).then(_ => {
-                    const dbName: string = ifProd() ? "discord_bot" : "discord_bot_testing";
+                    const dbName: string = isProd() ? "discord_bot" : "discord_bot_testing";
                     this.eventsCollection = this.mongoClient.db(dbName).collection("events");
                     this.serversCollection = this.mongoClient.db(dbName).collection("servers");
                     this.usersCollection = this.mongoClient.db(dbName).collection("users");
@@ -182,30 +182,58 @@ export default class Bot {
         });
 
         command.on("poll", (message: Message) => {
-            const valid = message.content.includes(':')
             let pollSize: number;
             let title: string;
             let choices: string = "";
-            if (valid) {
-                let split = message.content.split(':')
-                title = split[0]
-                split = split[1].split(',')
-                pollSize = (split.length <= 10 ? split.length : 10)
-                for (let i = 0; i < split.length - 1; i++) {
-                    choices += (i + 1) + ':' + split[i] + '\n'
-                }
-                choices += split.length + ':' + split[split.length - 1]
-            } else {
-                title = message.content
-                pollSize = 10
+
+            let split = message.content.split(':');
+            if (split.length < 2) {
+                message.channel.send("Poll must contain `:` to separate prompt and choices");
+                return;
             }
 
-            let embed = new MessageEmbed().setTitle(title).setDescription(choices);
-            var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-            message.channel.send({ embed }).then(sent => {
-                for (let i = 0; i < pollSize; i++) {
-                    sent.react(emoteList[i]);
+            // Title
+            title = split[0].trim();
+            if (!title.length) {
+                title = 'Untitled';
+            }
+
+            // Checks for valid choices
+            split = split[1].split(',');
+            for (let i = 0; i < split.length; i++) {
+                split[i] = split[i].trim();
+
+                if (split[i].length == 0) {
+                    split.splice(i, 1);
+                    i--;
                 }
+            }
+
+            if (!split.length) {
+                message.channel.send("Poll must contain at least 1 choice");
+                return;
+            }
+
+            // Creates poll contents, up to 10 choices
+            pollSize = Math.min(split.length, 10);
+            for (let i = 0; i < pollSize - 1; i++) {
+                choices += (i + 1) + ': ' + split[i] + '\n';
+            }
+
+            choices += split.length + ': ' + split[pollSize - 1];
+
+            // Embeds, sends, and reacts
+            let embed = new MessageEmbed()
+                .setTitle(title)
+                .setDescription(choices);
+
+            var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+                .splice(0, pollSize);
+
+            message.channel.send({ embed }).then(sent => {
+                emoteList.forEach(emote => {
+                    sent.react(emote);
+                });
             });
         });
 
