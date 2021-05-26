@@ -194,7 +194,7 @@ export default class Bot {
                 for (let i = 0; i < split.length - 1; i++) {
                     choices += (i + 1) + ':' + split[i] + '\n'
                 }
-                choices += choices.length + ':', split[split.length - 1]
+                choices += split.length + ':' + split[split.length - 1]
             } else {
                 title = message.content
                 pollSize = 10
