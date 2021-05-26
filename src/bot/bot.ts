@@ -214,6 +214,7 @@ export default class Bot {
                 for (let i = 0; i < pollSize - 1; i++) {
                     choices += (i + 1) + ': ' + split[i].trim() + '\n'
                 }
+              
                 choices += split.length + ': ' + split[pollSize - 1].trim()
             } else {
                 message.channel.send("Poll must contain \':\' to separate prompt and choices")
