@@ -182,24 +182,46 @@ export default class Bot {
         });
 
         command.on("poll", (message: Message) => {
-            const valid = message.content.includes(':')
             let pollSize: number;
             let title: string;
             let choices: string = "";
-            if (valid) {
+
+            // Checks for syntax
+            if (message.content.includes(':')) {
                 let split = message.content.split(':')
-                title = split[0]
-                split = split[1].split(',')
-                pollSize = (split.length <= 10 ? split.length : 10)
-                for (let i = 0; i < split.length - 1; i++) {
-                    choices += (i + 1) + ':' + split[i] + '\n'
+
+                // Title
+                title = split[0].trim()
+                if (title.length == 0) {
+                    title = 'Untitled'
                 }
-                choices += split.length + ':' + split[split.length - 1]
+
+                // Checks for valid choices
+                split = split[1].split(',')
+                for (let i = 0; i < split.length; i++) {
+                    if (split[i].trim().length == 0) {
+                        split.shift()
+                        i--
+                    }
+                }
+                if (split.length == 0) {
+                    message.channel.send("Poll must contain at least 1 choice")
+                    return;
+                }
+
+                // Creates poll contents, up to 10 choices
+                pollSize = (split.length <= 10 ? split.length : 10)
+                for (let i = 0; i < pollSize - 1; i++) {
+                    choices += (i + 1) + ': ' + split[i].trim() + '\n'
+                }
+              
+                choices += split.length + ': ' + split[pollSize - 1].trim()
             } else {
-                title = message.content
-                pollSize = 10
+                message.channel.send("Poll must contain \':\' to separate prompt and choices")
+                return;
             }
 
+            // Embeds, sends, and reacts
             let embed = new MessageEmbed().setTitle(title).setDescription(choices);
             var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
             message.channel.send({ embed }).then(sent => {
