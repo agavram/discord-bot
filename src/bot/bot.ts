@@ -185,16 +185,16 @@ export default class Bot {
             const valid = message.content.includes(':')
             let pollSize: number;
             let title: string;
-            let choices: string;
+            let choices: string = "";
             if (valid) {
-                var split = message.content.split(':')
+                let split = message.content.split(':')
                 title = split[0]
                 split = split[1].split(',')
                 pollSize = (split.length <= 10 ? split.length : 10)
                 for (let i = 0; i < split.length - 1; i++) {
-                    choices = choices.concat((i + 1) + ':', split[i] + '\n')
+                    choices += (i + 1) + ':' + split[i] + '\n'
                 }
-                choices = choices.concat(choices.length + ':', split[split.length - 1])
+                choices += choices.length + ':', split[split.length - 1]
             } else {
                 title = message.content
                 pollSize = 10
