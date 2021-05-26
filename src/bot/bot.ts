@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
+import { execSync } from "child_process";
 import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from "discord.js";
 import { MongoClient, Collection } from "mongodb";
 import { EventEmitter } from "events";
@@ -14,6 +15,7 @@ import { parse } from "sherlockjs";
 import { GoogleSearchPlugin } from "../plugins/google";
 import { LatexConverter } from "../plugins/latex";
 import { RobinHoodPlugin } from "../plugins/ticker";
+
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -304,6 +306,12 @@ export default class Bot {
                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
             }
         });
+
+        command.on("version", (message: Message) => {
+            let gitRevision = execSync("git rev-parse HEAD").toString().trim();
+            let time = new Date(parseInt(execSync("git log -1 --format=%ct").toString()) * 1000).toLocaleString("en-US");
+            message.channel.send(`\`${gitRevision}\` from ${time}`)
+        })
 
         command.on("vote", (message: Message) => {
             let embed = new MessageEmbed().setTitle(message.content);
