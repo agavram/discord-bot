@@ -182,23 +182,28 @@ export default class Bot {
         });
 
         command.on("poll", (message: Message) => {
-            const found = message.content.match(/{(\d+)}(.*)/);
-
+            const valid = message.content.includes(':')
             let pollSize: number;
             let title: string;
-
-            if (found == null) {
-                pollSize = 10;
-                title = message.content;
+            let choices: string;
+            if (valid) {
+                var split = message.content.split(':')
+                title = split[0]
+                split = split[1].split(',')
+                pollSize = (split.length <= 10 ? split.length : 10)
+                for (let i = 0; i < split.length - 1; i++) {
+                    choices = choices.concat((i + 1) + ':', split[i] + '\n')
+                }
+                choices = choices.concat(choices.length + ':', split[split.length - 1])
             } else {
-                pollSize = parseInt(found[1]);
-                title = found[2];
+                title = message.content
+                pollSize = 10
             }
 
-            let embed = new MessageEmbed().setTitle(title);
+            let embed = new MessageEmbed().setTitle(title).setDescription(choices);
             var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
             message.channel.send({ embed }).then(sent => {
-                for (let i = 0; i < Math.min(pollSize, 10); i++) {
+                for (let i = 0; i < pollSize; i++) {
                     sent.react(emoteList[i]);
                 }
             });
