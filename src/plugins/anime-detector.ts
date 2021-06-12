@@ -2,7 +2,7 @@ import * as tf from '@tensorflow/tfjs-node';
 import * as Jimp from 'jimp';
 
 export class AnimeDetector {
-    readonly imageSize: number = 256;
+    readonly imageSize: number = 224;
     model: tf.GraphModel
 
     constructor() { }
