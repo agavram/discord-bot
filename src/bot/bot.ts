@@ -388,6 +388,10 @@ export default class Bot {
             }
         });
 
+        command.on("cum", (message: Message) => {
+            message.channel.send("8===D 💦");
+        });
+
         dm.on("channel", async (message: Message) => {
             const user: user = {
                 userId: message.author.id,
