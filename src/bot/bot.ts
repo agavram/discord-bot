@@ -15,13 +15,14 @@ import { parse } from "sherlockjs";
 import { GoogleSearchPlugin } from "../plugins/google";
 import { LatexConverter } from "../plugins/latex";
 import { RobinHoodPlugin } from "../plugins/ticker";
-
+import { AnimeDetector } from "../plugins/anime-detector";
 
 export default class Bot {
     public Ready: Promise<void>;
 
     client: Client;
     mongoClient: MongoClient;
+    animeDetector: AnimeDetector;
 
     eventsCollection: Collection;
     serversCollection: Collection;
@@ -40,6 +41,7 @@ export default class Bot {
         this.Ready = new Promise((resolve, reject) => {
             this.client = new Client({ partials: ["MESSAGE", "REACTION"] });
             this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
+            this.animeDetector = new AnimeDetector();
 
                 MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
                     this.mongoClient = client;
@@ -53,6 +55,7 @@ export default class Bot {
                             this.events = docs;
                         }),
                         this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
+                        this.animeDetector.initialize()
                     ]).then(() => {
                         this.client.once("ready", () => {
                             scheduleJob("0,30 * * * *", () => {
@@ -91,7 +94,7 @@ export default class Bot {
                     break;
             }
 
-            emitter.emit(msg.substring(this.prefix.length).split(" ")[0], message);
+            emitter.emit(msg.substring(this.prefix.length).split(" ")[0].toLowerCase(), message);
         });
 
         ["messageReactionAdd", "messageReactionRemove"].forEach((e) => {
@@ -181,6 +184,27 @@ export default class Bot {
         command.on("latex", async (message: Message) => {
             message.content = message.content.replace(/`/g, "");
             message.channel.send({ files: [await LatexConverter.convert(message.content)] });
+        });
+
+        command.on("isanime", async (message: Message) => {
+            const urlMatch = /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)?/gi;
+            if (!message.content || !(new RegExp(urlMatch).test(message.content))) {
+                message.channel.send("Invalid URL");
+                return;
+            }
+
+            let res : any = await this.animeDetector.predict(message.content);
+            res = res.dataSync();
+
+            if (res[0] < 0.1 && res[1] < 0.1) {
+                message.channel.send("Unknown");
+                return
+            }
+    
+            if  (res[0] > res[1])
+                message.channel.send("Anime: " + Math.round((res[0] * 100)) + "% Confident");
+            else
+                message.channel.send("Not Anime: " + Math.round((res[1] * 100)) + "% Confident");
         });
 
         command.on("poll", (message: Message) => {
