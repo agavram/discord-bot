@@ -1,7 +1,7 @@
 import * as mjAPI from 'mathjax-node-svg2png';
 
 export class LatexConverter {
-    public static async convert(latex: string) {
+    public static async convert(latex: string) : Promise<Buffer> {
         return new Promise((resolve, reject) => {
 
             const options = {
