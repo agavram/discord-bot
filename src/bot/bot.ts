@@ -1,6 +1,5 @@
 import * as dotenv from "dotenv";
 dotenv.config();
-
 import { execSync } from "child_process";
 import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from "discord.js";
 import { MongoClient, Collection } from "mongodb";
@@ -16,7 +15,8 @@ import { GoogleSearchPlugin } from "../plugins/google";
 import { LatexConverter } from "../plugins/latex";
 import { RobinHoodPlugin } from "../plugins/ticker";
 import { AnimeDetector } from "../plugins/anime-detector";
-import WebSocket from 'ws';
+import WebSocket = require('ws');
+import { captions } from "../helpers/captions";
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -44,7 +44,6 @@ export default class Bot {
             this.client = new Client({ partials: ["MESSAGE", "REACTION"] });
             this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
             this.animeDetector = new AnimeDetector();
-
                 MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
                     this.mongoClient = client;
                 }).then(_ => {
@@ -396,114 +395,78 @@ export default class Bot {
 
 
 
+        
         command.on ("isanime2", (message: Message) => {
             const guild = this.client.guilds.resolve(message.guild.id);
             const members = guild.members.fetch();
             const sendError = this.sendError.bind(this);
             const pattern = new RegExp(/^(https?:\/\/)?([a-z\d-]*\.)+[a-z]{2,}/);
-            const negativePfp = [
-              'Sad... just sad',
-              'Why would you possibly want this as your profile picture',
-              'Pretty sad pfp tbh',
-              'I would recommend changing your profile picture as it induces depression in all who see it',
-              'Cool pfp and all but lets be honest, the default discord pfp is better',
-              'Your pfp makes me actively want to destroy my own code so I don\'t have to look at it',
-              'You\'ll never get stepped on if you have a pfp like this',
-              'Sadge... just sadge'
-            ]
-            
-            const positivePfp = [
-              'Now this a truely beautiful pfp',
-              'Seeing this pfp makes even me, an emotionless robot, happy',
-              'Pretty cute pfp ngl',
-              'I r8 8/8 m8... or whatever it says here',
-              'If I knew how I might even make this my own pfp',
-              ':drool: (idk how to do reactions yet)',
-              'Dapper, Dandy, Dazzling, Decorative, Decisive, Delightful',
-              'Pop off with the pfp sis. Keep on slaying queen'
-            ]
-      
-            const negativeImg = [
-              'Please remove this garbage from the chat',
-              'I\'m offended by the mere presense of this link',
-              'Posting something this repulsive should be a war crime',
-              'People look at this picture when they have a stomache ache to force projectile vomit',
-              'The people who enjoy this kind of image are the same kind of people who eat with their toes'
-            ]
-      
-            const positiveImg = [
-              'Ya know, I have no idea what this image is (literally no idea) but I quite like the artistic charm of it',
-              'Such a picturesque image such as this is fitting for such a picturesque person like yourself',
-              'Pretty cool how you sent such a nice image of a totally normal thing that I\'m sure everyone relates to cuz it\'s so cool',
-              'This image right here could probably solve world peace if everyone saw it',
-              'I like beans'
-            ]
-      
+        
             let msg = message.content.trim();
             this.ws = new WebSocket('ws://3.142.198.53:8080', {
-              rejectUnauthorized: false,
+                rejectUnauthorized: false,
             });
-      
-            this.ws.on('open', () => {
+        
+            this.ws.on ('open', () => {
                 if (msg == "" || msg == null) {
                     sendError (message.channel, "Invalid syntax. Try sending a link or typing 'pfp' or typing 'me'");
                 }
-                else if (pattern.test(msg) != false) {
+                else if (pattern.test (msg) != false) {
                     this.sendData (message.member.user.id, message.member.user.username, msg);
                     this.ws.on ('message', function incoming(data) {
-                    data = JSON.parse (data);
-                    if (data.output.includes("Malformed URL")){
+                        data = JSON.parse (data);
+                        if (data.output.includes("Malformed URL")) {
                         sendError (message.channel, "Link URL is invalid");
-                    } else if (data.output.includes("true")) {
-                        message.channel.send (negativeImg[Math.round (Math.random() * (negativeImg.length - 1))] + ": " + Math.round (Math.random () * 4) + "/10");
-                    } else {
-                        message.channel.send (positiveImg[Math.round (Math.random() * (positiveImg.length - 1))] + ": " + (Math.round (Math.random () * 6) + 4) + "/10")
+                        } else if (data.output.includes ("true")) {
+                        message.channel.send (captions.negativeImg[Math.round (Math.random() * (captions.negativeImg.length - 1))] + ": " + Math.round (Math.random () * 4) + "/10");
+                        } else {
+                        message.channel.send (captions.positiveImg[Math.round (Math.random() * (captions.positiveImg.length - 1))] + ": " + (Math.round (Math.random () * 6) + 4) + "/10")
                     }
                     });
                 }
-                else if (msg.includes ('me')){
+                else if (msg.includes ('me')) {
                     let user = message.author;
                     this.sendData (user.id, user.username, user.avatarURL ());
-                    this.ws.on('message', function incoming(data) {
-                    data = JSON.parse (data);
-                    if (data.output.includes("Malformed URL")){
+                    this.ws.on('message', function incoming (data) {
+                        data = JSON.parse (data);
+                        if (data.output.includes ("Malformed URL")){
                         sendError (message.channel, "You are invalid... (I'm not sure why this would error so gl lol)");
-                    } else if (data.output.includes("true")) {
-                        message.channel.send (negativePfp[Math.round (Math.random() * (negativePfp.length - 1))] + ": " + Math.round (Math.random () * 4) + "/10");
-                    } else {
-                        message.channel.send (positivePfp[Math.round (Math.random() * (positivePfp.length - 1))] + ": " + (Math.round (Math.random () * 6) + 4) + "/10")
-                    }
+                        } else if (data.output.includes ("true")) {
+                        message.channel.send (captions.negativePfp[Math.round (Math.random() * (captions.negativePfp.length - 1))] + ": " + Math.round (Math.random () * 4) + "/10");
+                        } else {
+                        message.channel.send (captions.positivePfp[Math.round (Math.random() * (captions.positivePfp.length - 1))] + ": " + (Math.round (Math.random () * 6) + 4) + "/10")
+                        }
                     });
                 }
                 else if (msg.includes ('pfp')) {
                     members.then (users => {
-                        users.array().forEach(user => {
-                            this.sendData (user.user.id, user.user.username, user.user.avatarURL ());
+                        users.array ().forEach(user => {
+                        this.sendData (user.user.id, user.user.username, user.user.avatarURL ());
                         });
                     }).catch (() => {console.log ("broken");});
-                    this.ws.on('message', function incoming(data) {
+                    this.ws.on('message', function incoming (data) {
                         data = JSON.parse (data);
-                        if (data.output.includes("true")){
+                        if (data.output.includes ("true")) {
                             members.then (users => {
-                                users.array().forEach(user => {
+                                users.array ().forEach(user => {
                                     if (user.user.id == data.id) {
-                                    message.channel.send (user.user.username + " is a degenerate weeb");
-                
-                                    //these should probably be uncommented for most servers tbh but perms would need to be changed too
-                
-                                    //message.channel.send (user.user.username + " has been kicked for being a degenerate weeb");
-                                    //user.kick(user.user.username + "has been kicked for being a degenerate weeb");
+                                        message.channel.send (user.user.username + " is a degenerate weeb");
+                    
+                                        //these should probably be uncommented for most servers tbh but perms would need to be changed too
+                    
+                                        //message.channel.send (user.user.username + " has been kicked for being a degenerate weeb");
+                                        //user.kick(user.user.username + "has been kicked for being a degenerate weeb");
                                     }
                                 });
-                            });
+                            })
                         }
                     });
                 }
                 else {
-                    sendError(message.channel, "Invalid syntax. Try sending a link or typing 'pfp' or typing 'me'");
+                    sendError (message.channel, "Invalid syntax. Try sending a link or typing 'pfp' or typing 'me'");
                 }
-                this.ws.on('error', (e) => {
-                    console.log (e);
+                this.ws.on ('error', (e) => {
+                console.log (e);
                 });
             });
         });
@@ -522,9 +485,9 @@ export default class Bot {
 
     private sendData (id, username, avatarURL) {
         this.ws.send (JSON.stringify ({
-        'id': id,
-        'username': username,
-        'avatar': avatarURL     
+            'id': id,
+            'username': username,
+            'avatar': avatarURL     
         }));
     }
 

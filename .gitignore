@@ -40,3 +40,13 @@ dist/**/*
 
 # ignore yarn.lock
 yarn.lock
+
+/node_modules
+/.vscode
+html.txt
+package-lock.json
+package.json
+.env
+*.js*
+!/src/client.js
+!/server_files/searchapi.js
