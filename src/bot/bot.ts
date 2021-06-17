@@ -58,7 +58,6 @@ export default class Bot {
                         this.animeDetector.initialize()
                     ]).then(() => {
                         this.client.once("ready", () => {
-                            console.log(schedule);
                             schedule("0,30 * * * *", () => {
                                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
                             });
