@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from "discord.js";
 import { MongoClient, Collection } from "mongodb";
 import { EventEmitter } from "events";
-import { scheduleJob } from "node-schedule";
+import { schedule } from "node-cron";
 import { Data2, Child } from "../interfaces/reddit";
 import { server, event, user } from "../interfaces/database";
 import { isProd } from "../helpers/functions";
@@ -58,11 +58,12 @@ export default class Bot {
                         this.animeDetector.initialize()
                     ]).then(() => {
                         this.client.once("ready", () => {
-                            scheduleJob("0,30 * * * *", () => {
+                            console.log(schedule);
+                            schedule("0,30 * * * *", () => {
                                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
                             });
-
-                            scheduleJob("0 0 * * *", () => {
+                            
+                            schedule("0 0 * * *", () => {
                                 this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
                             });
 
@@ -470,7 +471,7 @@ export default class Bot {
     }
 
     private scheduleEventJob(time: Date) {
-        scheduleJob(time, () => {
+        schedule(time, () => {
             const index = this.events.findIndex(e => e.time === time);
 
             this.events[index].attendees.forEach(attendee => {
