@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs-node';
 import * as Jimp from 'jimp';
+import { resolve } from 'path';
 
 export class AnimeDetector {
     readonly imageSize: number = 224;
@@ -9,6 +10,7 @@ export class AnimeDetector {
 
     async initialize(): Promise<void> {
         this.model = await tf.loadGraphModel('file://./src/ml_model/model.json');
+        resolve();
     }
 
     public async predict(url) {
