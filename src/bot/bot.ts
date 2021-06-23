@@ -41,35 +41,35 @@ export default class Bot {
         this.Ready = new Promise((resolve, reject) => {
             this.client = new Client({ partials: ["MESSAGE", "REACTION"] });
             this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
-            this.animeDetector = new AnimeDetector();
+                this.animeDetector = new AnimeDetector();
 
-                MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
-                    this.mongoClient = client;
-                }).then(_ => {
-                    const dbName: string = isProd() ? "discord_bot" : "discord_bot_testing";
-                    this.eventsCollection = this.mongoClient.db(dbName).collection("events");
-                    this.serversCollection = this.mongoClient.db(dbName).collection("servers");
-                    this.usersCollection = this.mongoClient.db(dbName).collection("users");
-                    Promise.allSettled([
-                        this.eventsCollection.find({}).toArray().then((docs) => {
-                            this.events = docs;
-                        }),
-                        this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
-                        this.animeDetector.initialize()
-                    ]).then(() => {
-                        this.client.once("ready", () => {
-                            schedule("0,30 * * * *", () => {
-                                this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
-                            });
-                            
-                            schedule("0 0 * * *", () => {
-                                this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
-                            });
-
-                            resolve();
+            MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
+                this.mongoClient = client;
+            }).then(_ => {
+                const dbName: string = isProd() ? "discord_bot" : "discord_bot_testing";
+                this.eventsCollection = this.mongoClient.db(dbName).collection("events");
+                this.serversCollection = this.mongoClient.db(dbName).collection("servers");
+                this.usersCollection = this.mongoClient.db(dbName).collection("users");
+                Promise.allSettled([
+                    this.eventsCollection.find({}).toArray().then((docs) => {
+                        this.events = docs;
+                    }),
+                    this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
+                    this.animeDetector.initialize()
+                ]).then(() => {
+                    this.client.once("ready", () => {
+                        schedule("0,30 * * * *", () => {
+                            this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
                         });
+
+                        schedule("0 0 * * *", () => {
+                            this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
+                        });
+
+                        resolve();
                     });
                 });
+            });
         });
 
         this.client.on("message", message => {
@@ -193,15 +193,15 @@ export default class Bot {
                 return;
             }
 
-            let res : any = await this.animeDetector.predict(message.content);
+            let res: any = await this.animeDetector.predict(message.content);
             res = res.dataSync();
 
             if (res[0] < 0.1 && res[1] < 0.1) {
                 message.channel.send("Unknown");
-                return
+                return;
             }
-    
-            if  (res[0] > res[1])
+
+            if (res[0] > res[1])
                 message.channel.send("Anime: " + Math.round((res[0] * 100)) + "% Confident");
             else
                 message.channel.send("Not Anime: " + Math.round((res[1] * 100)) + "% Confident");
@@ -334,8 +334,8 @@ export default class Bot {
         command.on("version", (message: Message) => {
             let gitRevision = execSync("git rev-parse HEAD").toString().trim();
             let time = new Date(parseInt(execSync("git log -1 --format=%ct").toString()) * 1000).toLocaleString("en-US");
-            message.channel.send(`\`${gitRevision}\` from ${time}`)
-        })
+            message.channel.send(`\`${gitRevision}\` from ${time}`);
+        });
 
         command.on("vote", (message: Message) => {
             let embed = new MessageEmbed().setTitle(message.content);
@@ -386,6 +386,22 @@ export default class Bot {
             if (image) {
                 message.channel.send({ files: [image] });
             }
+        });
+
+        command.on("transferemotes", (message: Message) => {
+            const emoteManager = message.guild.emojis;
+            const currentEmotes = emoteManager.cache.map(emote => emote.name);
+            this.client.guilds.fetch(message.content)
+                .then(function (guild) {
+                    const emoteList = guild.emojis.cache.map(emote => emote.name + "=https://cdn.discordapp.com/emojis/" + emote.id + ".png");
+                    for (let i = 0; i < emoteList.length; i++) {
+                        let emote = emoteList[i].split("=");
+                        if (emote.length == 2 && !currentEmotes.includes(emote[0])) {
+                            emoteManager.create(emote[1], emote[0]);
+                        }
+                    }
+                })
+                .catch(console.error);
         });
 
         command.on("cum", (message: Message) => {
