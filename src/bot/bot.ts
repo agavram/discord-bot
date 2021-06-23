@@ -356,15 +356,16 @@ export default class Bot {
         });
 
         command.on("transferemotes", (message: Message) => {
+            const emoteManager = message.guild.emojis;
+            const currentEmotes = emoteManager.cache.map(emote => emote.name);
             this.client.guilds.fetch(message.content)
                 .then(function(guild) {
-                    const emoteImageList = guild.emojis.cache.map(emote => "https://cdn.discordapp.com/emojis/" + emote.id + ".png");
-                    const emoteNameList = guild.emojis.cache.map(emote => emote.name);
-
-                    // Testing
-                    for (let i = 0; i < emoteImageList.length; i++) {
-                        message.channel.send(emoteImageList[i]);
-                        message.channel.send(emoteNameList[i]);
+                    const emoteList = guild.emojis.cache.map(emote => emote.name + "=https://cdn.discordapp.com/emojis/" + emote.id + ".png");
+                    for (let i = 0; i < emoteList.length; i++) {
+                        let emote = emoteList[i].split("=");
+                        if (emote.length == 2 && !currentEmotes.includes(emote[0])) {
+                            emoteManager.create(emote[1], emote[0]);
+                        }
                     }
                 })
                 .catch(console.error);
