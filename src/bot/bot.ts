@@ -14,6 +14,7 @@ import { parse } from "sherlockjs";
 import { GoogleSearchPlugin } from "../plugins/google";
 import { LatexConverter } from "../plugins/latex";
 import { RobinHoodPlugin } from "../plugins/ticker";
+import { time } from "console";
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -37,34 +38,34 @@ export default class Bot {
 
         this.Ready = new Promise((resolve, reject) => {
             this.client = new Client({ partials: ["MESSAGE", "REACTION"] });
-            this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN),
+            this.client.login(ifProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN);
 
-                MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
-                    this.mongoClient = client;
-                }).then(_ => {
-                    const dbName: string = ifProd() ? "discord_bot" : "discord_bot_testing";
-                    this.eventsCollection = this.mongoClient.db(dbName).collection("events");
-                    this.serversCollection = this.mongoClient.db(dbName).collection("servers");
-                    this.usersCollection = this.mongoClient.db(dbName).collection("users");
-                    Promise.allSettled([
-                        this.eventsCollection.find({}).toArray().then((docs) => {
-                            this.events = docs;
-                        }),
-                        this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
-                    ]).then(() => {
-                        this.client.once("ready", () => {
-                            scheduleJob("0,30 * * * *", () => {
-                                this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
-                            });
+                // MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true }).then(client => {
+                //     this.mongoClient = client;
+                // }).then(_ => {
+                //     const dbName: string = ifProd() ? "discord_bot" : "discord_bot_testing";
+                //     this.eventsCollection = this.mongoClient.db(dbName).collection("events");
+                //     this.serversCollection = this.mongoClient.db(dbName).collection("servers");
+                //     this.usersCollection = this.mongoClient.db(dbName).collection("users");
+                //     Promise.allSettled([
+                //         this.eventsCollection.find({}).toArray().then((docs) => {
+                //             this.events = docs;
+                //         }),
+                //         this.eventsCollection.deleteMany({ "time": { "$lt": new Date() } }),
+                //     ]).then(() => {
+                //         this.client.once("ready", () => {
+                //             scheduleJob("0,30 * * * *", () => {
+                //                 this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
+                //             });
 
-                            scheduleJob("0 0 * * *", () => {
-                                this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
-                            });
+                //             scheduleJob("0 0 * * *", () => {
+                //                 this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
+                //             });
 
-                            resolve();
-                        });
-                    });
-                });
+                //             resolve();
+                //         });
+                //     });
+                // });
         });
 
         this.client.on("message", message => {
@@ -352,6 +353,21 @@ export default class Bot {
 
         command.on("cum", (message: Message) => {
             message.channel.send("8===D 💦");
+        });
+
+        command.on("transferemotes", (message: Message) => {
+            this.client.guilds.fetch(message.content)
+                .then(function(guild) {
+                    const emoteImageList = guild.emojis.cache.map(emote => "https://cdn.discordapp.com/emojis/" + emote.id + ".png");
+                    const emoteNameList = guild.emojis.cache.map(emote => emote.name);
+
+                    // Testing
+                    for (let i = 0; i < emoteImageList.length; i++) {
+                        message.channel.send(emoteImageList[i]);
+                        message.channel.send(emoteNameList[i]);
+                    }
+                })
+                .catch(console.error);
         });
 
         dm.on("channel", async (message: Message) => {
