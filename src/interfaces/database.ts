@@ -11,7 +11,9 @@ export interface event {
     _id?: string,
     title: string,
     time: Date,
-    attendees: Array<string>
+    attendees: Array<string>,
+    messageId: string,
+    channelId: string
 }
 
 export interface user {

@@ -3,9 +3,10 @@ dotenv.config();
 
 import { execSync } from "child_process";
 import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from "discord.js";
+require('discord-reply');
 import { MongoClient, Collection } from "mongodb";
 import { EventEmitter } from "events";
-import { schedule } from "node-cron";
+import { job } from "cron";
 import { Data2, Child } from "../interfaces/reddit";
 import { server, event, user } from "../interfaces/database";
 import { isProd } from "../helpers/functions";
@@ -58,13 +59,13 @@ export default class Bot {
                     this.animeDetector.initialize()
                 ]).then(() => {
                     this.client.once("ready", () => {
-                        schedule("0,30 * * * *", () => {
+                        job("0,30 * * * *", () => {
                             this.serversCollection.find({}).toArray().then(servers => this.sendMeme(servers));
-                        });
+                        }, null, true);
 
-                        schedule("0 0 * * *", () => {
+                        job("0 0 * * *", () => {
                             this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
-                        });
+                        }, null, true);
 
                         resolve();
                     });
@@ -169,7 +170,7 @@ export default class Bot {
             message.channel.send({ embed }).then(sent => {
                 sent.react("✅");
                 if (parsed.startDate && new Date(parsed.startDate) > new Date())
-                    this.newEvent(parsed.eventTitle, parsed.startDate);
+                    this.newEvent({title: parsed.eventTitle, time: parsed.startDate, attendees: [], messageId: sent.id, channelId: message.channel.id});
             });
         });
 
@@ -420,11 +421,10 @@ export default class Bot {
         });
     }
 
-    private newEvent(title: string, time: Date) {
-        const event: event = { title: title, time: time, attendees: [] };
+    private newEvent(event: event) {
         this.eventsCollection.insertOne(event);
         this.events.push(event);
-        this.scheduleEventJob(time);
+        this.scheduleEventJob(event.time);
     }
 
     private updateEvent(time: Date, attendees: Array<string>) {
@@ -486,18 +486,20 @@ export default class Bot {
     }
 
     private scheduleEventJob(time: Date) {
-        schedule(time, () => {
-            const index = this.events.findIndex(e => e.time === time);
+        job(time, async () => {
+            const event = this.events[this.events.findIndex(e => e.time === time)]
+            const channel = await this.client.channels.fetch(event.channelId) as TextChannel
+            const message = await channel.messages.resolve(event.messageId)
+            
 
-            this.events[index].attendees.forEach(attendee => {
-                try {
-                    this.client.users.resolve(attendee).send(this.events[index].title + " is happening right now");
-                } catch (error) {
-                    console.log("Failed to DM: " + attendee);
-                }
+            let mentions: string[] = []
+            event.attendees.forEach(async attendee => {
+                mentions.push(`<@${attendee}>`)
             });
 
-            this.eventsCollection.deleteOne({ "time": time });
-        });
+            // @ts-ignore
+            message.lineReplyNoMention(mentions.join(' '))
+            this.eventsCollection.deleteOne({ 'time' : time });
+        }, null, true);
     }
 }
