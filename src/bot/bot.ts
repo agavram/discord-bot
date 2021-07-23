@@ -67,6 +67,20 @@ export default class Bot {
                             this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
                         }, null, true);
 
+                        job("0 3 * * *", async () => {
+                            const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1')
+                            const games = res.data?.dates[0].games
+                            
+                            for (const game of games ?? []) {
+                                if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
+                                    job(game.gameDate, async () => {
+                                        //@ts-ignore
+                                        this.client.channels.resolve('856029113747111949').send("<@&858922041671024660>");
+                                    }, null, true);
+                                }
+                            }
+                        }, null, true);
+
                         resolve();
                     });
                 });
