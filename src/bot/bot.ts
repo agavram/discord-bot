@@ -73,13 +73,13 @@ export default class Bot {
                             
                             for (const game of games ?? []) {
                                 if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
-                                    job(game.gameDate, async () => {
+                                    job(new Date(game.gameDate), async () => {
                                         //@ts-ignore
                                         this.client.channels.resolve('856029113747111949').send("<@&858922041671024660>");
                                     }, null, true);
                                 }
                             }
-                        }, null, true);
+                        }, null, true, null, null, true);
 
                         resolve();
                     });
