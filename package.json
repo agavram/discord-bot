@@ -22,6 +22,7 @@
     "erlpack": "github:discordapp/erlpack",
     "jimp": "^0.16.1",
     "mathjax-node-svg2png": "^2.0.0",
+    "moment": "^2.29.1",
     "mongodb": "^3.6.10",
     "puppeteer": "^5.5.0",
     "sherlockjs": "^1.4.0",
