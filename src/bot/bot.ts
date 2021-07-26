@@ -435,7 +435,12 @@ export default class Bot {
         const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1');
         const games = res.data?.dates[0].games;
 
+        console.log('Currently: ' + new Date().toLocaleTimeString());
+        console.log('games length');
+        console.log(games.length);
         for (const game of games ?? []) {
+            console.log('checking game');
+            console.log(game.teams);
           if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
             const gameStart = new Date(game.gameDate);
             if (gameStart < new Date())
