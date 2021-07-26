@@ -4,6 +4,7 @@ export interface server {
     channelGeneral: string,
     channelMemes: string,
     channelLogging: string,
+    channelMariners?: string,
     posts: Array<string>
 }
 

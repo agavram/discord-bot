@@ -18,6 +18,7 @@ import { LatexConverter } from "../plugins/latex";
 import { RobinHoodPlugin } from "../plugins/ticker";
 import { AnimeDetector } from "../plugins/anime-detector";
 import * as moment from 'moment';
+import { orderBy } from 'lodash';
 
 export default class Bot {
     public Ready: Promise<void>;
@@ -68,25 +69,7 @@ export default class Bot {
                             this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
                         }, null, true);
 
-                        job("0 3 * * *", async () => {
-                            const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1')
-                            const games = res.data?.dates[0].games
-                            
-                            for (const game of games ?? []) {
-                                if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
-                                    const gameStart = new Date(game.gameDate)
-                                    if (gameStart < new Date())
-                                        return
-                                    
-                                    const notificationTime = new Date(gameStart.getTime() - 1000 * 60 * 10)
-                                    console.log(notificationTime.toString());
-                                    job(notificationTime, async () => {
-                                        //@ts-ignore
-                                        this.client.channels.resolve('856029113747111949').send(`${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`);
-                                    }, null, true);
-                                }
-                            }
-                        }, null, true, null, null, true);
+                        job("0 3 * * *", () => { this.notifyMariners() }, null, true, null, null, true);
 
                         resolve();
                     });
@@ -446,6 +429,66 @@ export default class Bot {
         this.eventsCollection.insertOne(event);
         this.events.push(event);
         this.scheduleEventJob(event.time);
+    }
+
+    private async notifyMariners() {
+        const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1');
+        const games = res.data?.dates[0].games;
+
+        for (const game of games ?? []) {
+          if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
+            const gameStart = new Date(game.gameDate);
+            if (gameStart < new Date())
+                return
+
+            const notificationTime = new Date(gameStart.getTime() - 1000 * 60 * 10)
+            // TODO: Remove this logging
+            console.log('Notifying for game at: ' + notificationTime.toString());
+            job(
+              notificationTime,
+              async () => {
+                this.serversCollection
+                  .find({ channelMariners: { $exists: true } })
+                  .toArray()
+                  .then((servers: server[]) => {
+                    servers.forEach((server) => {
+                      this.client.channels
+                        .resolve(server.channelMariners)
+                        //@ts-ignore
+                        .send(`${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`);
+
+                      const highlightsPosted: string[] = [];
+
+                      // TODO: Move this out of servers collection
+                      const ping = setInterval(async () => {
+                        const status = (
+                          await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${game.gamePk}&useLatestGames=true&language=en`)
+                        ).data.dates[0].games[0].status;
+
+                        let updates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data.highlights.highlights.items;
+                        updates = orderBy(updates, (update) => new Date(update.date), 'asc')
+
+                        for (let i = 0; i < updates.length; i++) {
+                          const update = updates[i];
+                          if (highlightsPosted.includes(update.id)) continue;
+
+                          const channel = this.client.channels.resolve(server.channelMariners) as TextChannel;
+                          await channel.send(update.blurb);
+                          await channel.send(update.playbacks[0].url);
+
+                          highlightsPosted.push(update.id);
+                        }
+
+                        if (status.abstractGameState === 'Final') clearInterval(ping);
+                      }, 1000 * 60);
+                    });
+                  });
+              },
+              null,
+              true,
+            );
+          }
+        }
     }
 
     private updateEvent(time: Date, attendees: Array<string>) {
