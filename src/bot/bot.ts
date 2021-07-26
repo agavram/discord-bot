@@ -75,8 +75,12 @@ export default class Bot {
                             for (const game of games ?? []) {
                                 if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
                                     const gameStart = new Date(game.gameDate)
-
-                                    job(new Date(gameStart.getTime() - 1000 * 60 * 10), async () => {
+                                    if (gameStart < new Date())
+                                        return
+                                    
+                                    const notificationTime = new Date(gameStart.getTime() - 1000 * 60 * 10)
+                                    console.log(notificationTime.toString());
+                                    job(notificationTime, async () => {
                                         //@ts-ignore
                                         this.client.channels.resolve('856029113747111949').send(`${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`);
                                     }, null, true);
