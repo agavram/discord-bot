@@ -87,7 +87,7 @@ export default class Bot {
               );
 
               job(
-                '0 3 * * *',
+                '0 10 * * *',
                 () => {
                   this.notifyMariners();
                 },
@@ -477,7 +477,7 @@ export default class Bot {
                 //@ts-ignore
                 .send(`${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`);
             });
-            
+
             const highlightsPosted: string[] = [];
 
             const ping = setInterval(async () => {
