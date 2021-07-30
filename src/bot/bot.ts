@@ -60,6 +60,9 @@ export default class Bot {
               .toArray()
               .then((docs) => {
                 this.events = docs;
+                this.events.forEach((event) => {
+                  this.scheduleEventJob(event.time);
+                })
               }),
             this.eventsCollection.deleteMany({ time: { $lt: new Date() } }),
             this.animeDetector.initialize(),
@@ -451,13 +454,8 @@ export default class Bot {
     const games = res.data?.dates[0].games;
 
     console.log('Currently: ' + new Date().toLocaleTimeString());
-    console.log('games length');
-    console.log(games.length);
 
     for (const game of games ?? []) {
-      console.log('checking game');
-      console.log(game.teams);
-
       if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
         const gameStart = new Date(game.gameDate);
         if (gameStart < new Date()) return;
@@ -575,7 +573,7 @@ export default class Bot {
       async () => {
         const event = this.events[this.events.findIndex((e) => e.time === time)];
         const channel = (await this.client.channels.fetch(event.channelId)) as TextChannel;
-        const message = await channel.messages.resolve(event.messageId);
+        const message = await channel.messages.fetch(event.messageId);
 
         let mentions: string[] = [];
         event.attendees.forEach(async (attendee) => {
