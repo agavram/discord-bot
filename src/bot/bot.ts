@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { execSync } from 'child_process';
-import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild, Emoji } from 'discord.js';
+import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from 'discord.js';
 require('discord-reply');
 import { MongoClient, Collection } from 'mongodb';
 import { EventEmitter } from 'events';
