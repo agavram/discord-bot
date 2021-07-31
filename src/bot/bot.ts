@@ -114,7 +114,14 @@ export default class Bot {
 
       if (!msg.startsWith(this.prefix)) return;
 
-      message.content = msg.split(' ').slice(1).join(' ');
+      message.content = msg.split(" ").slice(1).join(" ");
+      
+      let msgLowerCase = msg.toLocaleLowerCase();
+      if (msgLowerCase.includes("texas")) {
+          message.react('OMEGALUL');
+      } else if (msgLowerCase.includes("houston") || msgLowerCase.includes("oakland")) {
+          message.react('mariners');
+      }
 
       let emitter: EventEmitter;
       switch (message.channel.type.toLowerCase()) {
