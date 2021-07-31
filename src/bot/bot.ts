@@ -78,6 +78,13 @@ export default class Bot {
                 return;
 
             message.content = msg.split(" ").slice(1).join(" ");
+            
+            let msgLowerCase = msg.toLocaleLowerCase();
+            if (msgLowerCase.includes("texas")) {
+                message.channel.send("Texas :OMEGALUL:");
+            } else if (msgLowerCase.includes("houston")) {
+                message.channel.send(":mariners:");
+            }
 
             let emitter: EventEmitter;
             switch (message.channel.type.toLowerCase()) {
