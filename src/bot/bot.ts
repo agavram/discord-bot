@@ -112,16 +112,18 @@ export default class Bot {
 
       let msg = message.content;
       let msgLowerCase = msg.toLocaleLowerCase();
-      
-      if (msgLowerCase.includes("texas")) {
-          message.react("<:OMEGALUL:856976423101399081>");
-      } else if (msgLowerCase.includes("houston") || msgLowerCase.includes("oakland")) {
-          message.react("<:mariners:857120069821530142>");
+
+      if (message.guild.id == '856029113747111946') {
+        if (msgLowerCase.includes('texas')) {
+          message.react('<:OMEGALUL:856976423101399081>');
+        } else if (msgLowerCase.includes('houston') || msgLowerCase.includes('oakland')) {
+          message.react('<:mariners:857120069821530142>');
+        }
       }
 
       if (!msg.startsWith(this.prefix)) return;
 
-      message.content = msg.split(" ").slice(1).join(" ");
+      message.content = msg.split(' ').slice(1).join(' ');
 
       let emitter: EventEmitter;
       switch (message.channel.type.toLowerCase()) {
