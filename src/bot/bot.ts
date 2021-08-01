@@ -62,7 +62,7 @@ export default class Bot {
                 this.events = docs;
                 this.events.forEach((event) => {
                   this.scheduleEventJob(event.time);
-                })
+                });
               }),
             this.eventsCollection.deleteMany({ time: { $lt: new Date() } }),
             this.animeDetector.initialize(),
