@@ -496,14 +496,21 @@ export default class Bot {
                 const update = updates[i];
                 if (highlightsPosted.includes(update.id)) continue;
 
-                servers.forEach(async (server) => {
-                  this.client.channels.resolve(server.channelMariners);
-                  const channel = this.client.channels.resolve(server.channelMariners) as TextChannel;
-                  await channel.send(update.blurb);
-                  await channel.send(update.playbacks[0].url);
-                });
+                try {
+                  servers.forEach(async (server) => {
+                    this.client.channels.resolve(server.channelMariners);
+                    const channel = this.client.channels.resolve(server.channelMariners) as TextChannel;
+                    await channel.send(update.blurb);
+                    await channel.send(update.playbacks[0].url);
+                  });
 
-                highlightsPosted.push(update.id);
+                  highlightsPosted.push(update.id);
+                } catch (error) {
+                  console.error(error);
+                  console.error('Could not send message');
+                  console.error(update.blurb);
+                  console.error(update.playbacks[0].url);
+                }
               }
 
               if (status.abstractGameState === 'Final') clearInterval(ping);
