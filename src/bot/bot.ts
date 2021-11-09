@@ -460,6 +460,9 @@ export default class Bot {
 
   private async notifyMariners() {
     const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1');
+    if (!res.data?.dates || !res.data?.dates.length) {
+      return;
+    }
     const games = res.data?.dates[0].games;
 
     console.log('Currently: ' + new Date().toLocaleTimeString());
