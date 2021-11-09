@@ -13,7 +13,7 @@
     "@tensorflow/tfjs-node": "^3.7.0",
     "@types/cron": "^1.7.3",
     "@types/lodash": "^4.14.171",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "bufferutil": "^4.0.3",
     "cheerio": "^1.0.0-rc.10",
     "cron": "^1.8.2",
