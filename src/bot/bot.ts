@@ -34,6 +34,8 @@ export default class Bot {
   prefix: string = '!';
   events: Array<event> = [];
 
+  dictionary: string[] = ["when", "the", "me"];
+
   readonly redditColor: string = '#FF4500';
 
   constructor() {
@@ -113,11 +115,21 @@ export default class Bot {
       let msg = message.content;
       let msgLowerCase = msg.toLocaleLowerCase();
 
-      if (message.guild.id == '856029113747111946') {
+      // Brazil
+      if (message.guild.id === '856029113747111946') {
         if (msgLowerCase.includes('texas')) {
           message.react('<:OMEGALUL:856976423101399081>');
         } else if (msgLowerCase.includes('houston') || msgLowerCase.includes('oakland')) {
           message.react('<:mariners:857120069821530142>');
+        }
+        if (msgLowerCase === 'when') {
+          let reply: string = '';
+          let length: number = Math.round((Math.random() * 92) + 8);
+          while (reply.length < length) {
+            let index = Math.floor(Math.random() * this.dictionary.length);
+            reply += this.dictionary[index] + ' ';
+          }
+          message.reply(reply);
         }
       }
 
