@@ -34,7 +34,7 @@ export default class Bot {
   prefix: string = '!';
   events: Array<event> = [];
 
-  dictionary: string[] = ["when", "the", "me"];
+  dictionary: string[] = ['when', 'the', 'me'];
 
   readonly redditColor: string = '#FF4500';
 
@@ -124,12 +124,12 @@ export default class Bot {
         }
         if (msgLowerCase === 'when') {
           let reply: string = '';
-          let length: number = Math.round((Math.random() * 92) + 8);
+          let length: number = Math.round(Math.random() * 92 + 8);
           while (reply.length < length) {
             let index = Math.floor(Math.random() * this.dictionary.length);
             reply += this.dictionary[index] + ' ';
           }
-          //ts-ignore
+          //@ts-ignore
           message.lineReplyNoMention(reply);
         }
       }
