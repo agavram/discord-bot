@@ -129,7 +129,8 @@ export default class Bot {
             let index = Math.floor(Math.random() * this.dictionary.length);
             reply += this.dictionary[index] + ' ';
           }
-          message.reply(reply);
+          //ts-ignore
+          message.lineReplyNoMention(reply);
         }
       }
 
