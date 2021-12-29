@@ -123,8 +123,8 @@ export default class Bot {
           message.react('<:mariners:857120069821530142>');
         }
         if (msgLowerCase === 'when') {
-          let reply: string = '';
-          let length: number = Math.round((Math.random() * 92) + 8);
+          let reply: string = 'me when the ';
+          let length: number = Math.round(Math.random() * 88);
           while (reply.length < length) {
             let index = Math.floor(Math.random() * this.dictionary.length);
             reply += this.dictionary[index] + ' ';
