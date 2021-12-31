@@ -34,7 +34,7 @@ export default class Bot {
   prefix: string = '!';
   events: Array<event> = [];
 
-  dictionary: string[] = ["when", "the", "me"];
+  dictionary: string[] = ['when', 'the', 'me'];
 
   readonly redditColor: string = '#FF4500';
 
@@ -125,11 +125,12 @@ export default class Bot {
         if (msgLowerCase === 'when') {
           let reply: string = 'me when the ';
           let length: number = Math.round(Math.random() * 88);
+
           while (reply.length < length) {
             let index = Math.floor(Math.random() * this.dictionary.length);
             reply += this.dictionary[index] + ' ';
           }
-          //ts-ignore
+          //@ts-ignore
           message.lineReplyNoMention(reply);
         }
       }
@@ -473,6 +474,9 @@ export default class Bot {
 
   private async notifyMariners() {
     const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1');
+    if (!res.data?.dates || !res.data?.dates.length) {
+      return;
+    }
     const games = res.data?.dates[0].games;
 
     console.log('Currently: ' + new Date().toLocaleTimeString());
@@ -511,14 +515,21 @@ export default class Bot {
                 const update = updates[i];
                 if (highlightsPosted.includes(update.id)) continue;
 
-                servers.forEach(async (server) => {
-                  this.client.channels.resolve(server.channelMariners);
-                  const channel = this.client.channels.resolve(server.channelMariners) as TextChannel;
-                  await channel.send(update.blurb);
-                  await channel.send(update.playbacks[0].url);
-                });
+                try {
+                  servers.forEach(async (server) => {
+                    this.client.channels.resolve(server.channelMariners);
+                    const channel = this.client.channels.resolve(server.channelMariners) as TextChannel;
+                    await channel.send(update.blurb);
+                    await channel.send(update.playbacks[0].url);
+                  });
 
-                highlightsPosted.push(update.id);
+                  highlightsPosted.push(update.id);
+                } catch (error) {
+                  console.error(error);
+                  console.error('Could not send message');
+                  console.error(update.blurb);
+                  console.error(update.playbacks[0].url);
+                }
               }
 
               if (status.abstractGameState === 'Final') clearInterval(ping);
