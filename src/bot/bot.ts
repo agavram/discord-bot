@@ -47,7 +47,7 @@ export default class Bot {
       this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
       this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN), (this.animeDetector = new AnimeDetector());
 
-      MongoClient.connect(process.env.MONGODB_URI, { useUnifiedTopology: true })
+      MongoClient.connect(process.env.MONGODB_URI)
         .then((client) => {
           this.mongoClient = client;
         })
@@ -56,55 +56,55 @@ export default class Bot {
           this.eventsCollection = this.mongoClient.db(dbName).collection('events');
           this.serversCollection = this.mongoClient.db(dbName).collection('servers');
           this.usersCollection = this.mongoClient.db(dbName).collection('users');
-          Promise.allSettled([
+
+          this.eventsCollection.deleteMany({ time: { $lt: new Date() } }).then(() => {
             this.eventsCollection
               .find({})
               .toArray()
-              .then((docs) => {
-                this.events = docs;
+              .then((docs: unknown) => {
+                this.events = docs as event[];
                 this.events.forEach((event) => {
                   this.scheduleEventJob(event.time);
                 });
-              }),
-            this.eventsCollection.deleteMany({ time: { $lt: new Date() } }),
-            this.animeDetector.initialize(),
-          ]).then(() => {
-            this.client.once('ready', () => {
-              job(
-                '0,30 * * * *',
-                () => {
-                  this.serversCollection
-                    .find({})
-                    .toArray()
-                    .then((servers) => this.sendMeme(servers));
-                },
-                null,
-                true,
-              );
+              });
+          });
+          this.animeDetector.initialize();
 
-              job(
-                '0 0 * * *',
-                () => {
-                  this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
-                },
-                null,
-                true,
-              );
+          this.client.once('ready', () => {
+            job(
+              '0,30 * * * *',
+              () => {
+                this.serversCollection
+                  .find({})
+                  .toArray()
+                  .then((servers: unknown) => this.sendMeme(servers as server[]));
+              },
+              null,
+              true,
+            );
 
-              job(
-                '0 10 * * *',
-                () => {
-                  this.notifyMariners();
-                },
-                null,
-                true,
-                null,
-                null,
-                true,
-              );
+            job(
+              '0 0 * * *',
+              () => {
+                this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
+              },
+              null,
+              true,
+            );
 
-              resolve();
-            });
+            job(
+              '0 10 * * *',
+              () => {
+                this.notifyMariners();
+              },
+              null,
+              true,
+              null,
+              null,
+              true,
+            );
+
+            resolve();
           });
         });
     });
@@ -168,7 +168,8 @@ export default class Bot {
       let embed = reaction.message.embeds[0];
       if (event !== 'messageReactionAdd' || !embed.author) return;
 
-      this.serversCollection.findOne({ server: reaction.message.guild.id }).then((server: server) => {
+      this.serversCollection.findOne({ server: reaction.message.guild.id }).then((s) => {
+        let server = s as unknown as server;
         if (reaction.message.channel.id !== server.channelMemes) return;
 
         const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
@@ -375,7 +376,7 @@ export default class Bot {
         this.serversCollection
           .find({})
           .toArray()
-          .then((servers) => this.sendMeme(servers));
+          .then((servers: unknown) => this.sendMeme(servers as server[]));
       }
     });
 
@@ -412,7 +413,7 @@ export default class Bot {
     });
 
     command.on('search', async (message: Message) => {
-      this.serversCollection.findOne({ server: message.guild.id }).then(async (server: server) => {
+      this.serversCollection.findOne({ server: message.guild.id }).then(async (server) => {
         if (server.channelGeneral === message.channel.id) {
           message.channel.send('no');
           return;
@@ -467,7 +468,7 @@ export default class Bot {
   }
 
   private newEvent(event: event) {
-    this.eventsCollection.insertOne(event);
+    this.eventsCollection.insertOne(event as unknown);
     this.events.push(event);
     this.scheduleEventJob(event.time);
   }
@@ -492,7 +493,7 @@ export default class Bot {
         job(
           notificationTime,
           async () => {
-            const servers: server[] = await this.serversCollection.find({ channelMariners: { $exists: true } }).toArray();
+            const servers = (await this.serversCollection.find({ channelMariners: { $exists: true } }).toArray()) as unknown as server[];
             if (!servers) throw new Error('Unable to fetch servers');
 
             servers.forEach((server) => {
