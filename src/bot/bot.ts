@@ -136,11 +136,12 @@ export default class Bot {
         }
       }
 
-      if (this.premoves.has(message.author.id)) {
-        let reply: string = this.premoves.get(message.author.id);
+      const id = parseInt(message.author.id);
+      if (this.premoves.has(id)) {
+        let reply: string = this.premoves.get(id);
         //@ts-ignore
         message.lineReplyNoMention(reply);
-        this.premoves.delete(message.author.id);
+        this.premoves.delete(id);
       }
 
       if (!msg.startsWith(this.prefix)) return;
