@@ -250,20 +250,19 @@ export default class Bot {
 
       message.delete();
 
-      if (split.length != 2) {
+      if (split.length < 2) {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
-
+      
       let userId = parseInt(split[0].trim());
       if (userId == NaN) {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
-      let premove_message = split[1].trim();
 
+      let premove_message = split.splice(1).join(" ").trim();
       if (!this.premoves.has(userId)) {
-        // Maybe add dm?
         this.premoves.set(userId, premove_message);
       }
     });
