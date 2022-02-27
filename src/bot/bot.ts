@@ -35,6 +35,7 @@ export default class Bot {
   events: Array<event> = [];
 
   dictionary: string[] = ['when', 'the', 'me'];
+  premoves: Map<number, string> = new Map<number, string>();
 
   readonly redditColor: string = '#FF4500';
 
@@ -135,6 +136,13 @@ export default class Bot {
         }
       }
 
+      if (this.premoves.has(message.author.id)) {
+        let reply: string = this.premoves.get(message.author.id);
+        //@ts-ignore
+        message.lineReplyNoMention(reply);
+        this.premoves.delete(message.author.id);
+      }
+
       if (!msg.startsWith(this.prefix)) return;
 
       message.content = msg.split(' ').slice(1).join(' ');
@@ -233,6 +241,29 @@ export default class Bot {
     command.on('latex', async (message: Message) => {
       message.content = message.content.replace(/`/g, '');
       message.channel.send({ files: [await LatexConverter.convert(message.content)] });
+    });
+
+    command.on('premove', (message: Message) => {
+      let split = message.content.trim().split(' ');
+
+      message.delete();
+
+      if (split.length != 2) {
+        message.channel.send('Syntax: {prefix}premove {userId} {message}');
+        return;
+      }
+
+      let userId = parseInt(split[0].trim());
+      if (userId == NaN) {
+        message.channel.send('Syntax: {prefix}premove {userId} {message}');
+        return;
+      }
+      let premove_message = split[1].trim();
+
+      if (!this.premoves.has(userId)) {
+        // Maybe add dm?
+        this.premoves.set(userId, premove_message);
+      }
     });
 
     command.on('isanime', async (message: Message) => {
@@ -451,7 +482,13 @@ export default class Bot {
     });
 
     command.on('cum', (message: Message) => {
-      message.channel.send('8===D 💦');
+      let length: number = 1 + Math.round(Math.random() * 9);
+      let ben: string = '8';
+      for (let i = 0; i < length; i++) {
+        ben += '=';
+      }
+      ben += 'D💦';
+      message.channel.send(ben);
     });
 
     dm.on('channel', async (message: Message) => {
