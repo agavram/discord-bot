@@ -36,6 +36,7 @@ export default class Bot {
 
   dictionary: string[] = ['when', 'the', 'me'];
   premoves: Map<number, string[]> = new Map<number, string[]>();
+  premove_size: number = 10;
 
   readonly redditColor: string = '#FF4500';
 
@@ -267,7 +268,9 @@ export default class Bot {
       if (!this.premoves.has(userId)) {
         this.premoves.set(userId, []);
       }
-      this.premoves.get(userId).push(premove_message);
+      if (this.premoves.get(userId).length < this.premove_size) {
+        this.premoves.get(userId).push(premove_message);
+      }
     });
 
     command.on('isanime', async (message: Message) => {
