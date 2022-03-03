@@ -23,6 +23,8 @@ import { orderBy } from 'lodash';
 export default class Bot {
   public Ready: Promise<void>;
 
+  static readonly PREMOVE_QUEUE_SIZE: number = 10;
+
   client: Client;
   mongoClient: MongoClient;
   animeDetector: AnimeDetector;
@@ -36,7 +38,6 @@ export default class Bot {
 
   dictionary: string[] = ['when', 'the', 'me'];
   premoves: Map<number, string[]> = new Map<number, string[]>();
-  premove_size: number = 10;
 
   readonly redditColor: string = '#FF4500';
 
@@ -268,8 +269,11 @@ export default class Bot {
       if (!this.premoves.has(userId)) {
         this.premoves.set(userId, []);
       }
-      if (this.premoves.get(userId).length < this.premove_size) {
-        this.premoves.get(userId).push(premove_message);
+      
+      const q = this.premoves.get(userId);
+      q.push(premove_message);
+      if (q.length > Bot.PREMOVE_QUEUE_SIZE) {
+        q.shift();
       }
     });
 
