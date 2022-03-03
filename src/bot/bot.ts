@@ -248,7 +248,7 @@ export default class Bot {
     });
 
     command.on('premove', (message: Message) => {
-      let split = message.content.trim().split(' ');
+      const split = message.content.trim().split(' ');
 
       message.delete();
 
@@ -257,13 +257,13 @@ export default class Bot {
         return;
       }
 
-      let userId = parseInt(split[0].trim());
+      const userId = parseInt(split[0].trim());
       if (userId == NaN) {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
 
-      let premove_message = split.splice(1).join(' ').trim();
+      const premove_message = split.splice(1).join(' ').trim();
       if (!this.premoves.has(userId)) {
         this.premoves.set(userId, []);
       }
