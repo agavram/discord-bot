@@ -35,7 +35,7 @@ export default class Bot {
   events: Array<event> = [];
 
   dictionary: string[] = ['when', 'the', 'me'];
-  premoves: Map<number, string> = new Map<number, string>();
+  premoves: Map<number, string[]> = new Map<number, string[]>();
 
   readonly redditColor: string = '#FF4500';
 
@@ -138,10 +138,12 @@ export default class Bot {
 
       const id = parseInt(message.author.id);
       if (this.premoves.has(id)) {
-        let reply: string = this.premoves.get(id);
+        let reply: string = this.premoves.get(id).shift();
         //@ts-ignore
         message.lineReplyNoMention(reply);
-        this.premoves.delete(id);
+        if (!this.premoves.get(id).length) {
+          this.premoves.delete(id);
+        }
       }
 
       if (!msg.startsWith(this.prefix)) return;
@@ -254,17 +256,18 @@ export default class Bot {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
-      
+
       let userId = parseInt(split[0].trim());
       if (userId == NaN) {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
 
-      let premove_message = split.splice(1).join(" ").trim();
+      let premove_message = split.splice(1).join(' ').trim();
       if (!this.premoves.has(userId)) {
-        this.premoves.set(userId, premove_message);
+        this.premoves.set(userId, []);
       }
+      this.premoves.get(userId).push(premove_message);
     });
 
     command.on('isanime', async (message: Message) => {
