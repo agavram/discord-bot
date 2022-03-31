@@ -39,7 +39,7 @@ export default class Bot {
   dictionary: string[] = ['when', 'the', 'me'];
   premoves: Map<number, string[]> = new Map<number, string[]>();
 
-  readonly redditColor: string = '#FF4500';
+  readonly redditColor = '#FF4500';
 
   constructor() {
     const command = new EventEmitter();
@@ -47,7 +47,10 @@ export default class Bot {
     const reaction = new EventEmitter();
 
     this.Ready = new Promise((resolve, reject) => {
-      this.client = new Client({ partials: ['MESSAGE', 'REACTION'] });
+      this.client = new Client({
+        partials: ['CHANNEL', 'MESSAGE', 'REACTION', 'GUILD_MEMBER', 'USER'],
+        intents: ['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_INVITES', 'GUILD_EMOJIS_AND_STICKERS', 'GUILD_BANS', 'DIRECT_MESSAGES', 'DIRECT_MESSAGE_REACTIONS'],
+      });
       this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN), (this.animeDetector = new AnimeDetector());
 
       MongoClient.connect(process.env.MONGODB_URI)
@@ -112,7 +115,7 @@ export default class Bot {
         });
     });
 
-    this.client.on('message', (message) => {
+    this.client.on('messageCreate', (message) => {
       if (message.author.bot) return;
 
       let msg = message.content;
@@ -153,12 +156,14 @@ export default class Bot {
       message.content = msg.split(' ').slice(1).join(' ');
 
       let emitter: EventEmitter;
-      switch (message.channel.type.toLowerCase()) {
-        case 'text':
+      switch (message.channel.type) {
+        case 'GUILD_TEXT':
+        case 'GUILD_PUBLIC_THREAD':
+        case 'GUILD_PRIVATE_THREAD':
           emitter = command;
           break;
 
-        case 'dm':
+        case 'DM':
           emitter = dm;
           break;
       }
@@ -195,9 +200,11 @@ export default class Bot {
             return false;
 
           if (user.partial) await user.fetch();
-          embed.setFooter(guild.member(user).displayName + ' shared this meme');
+          embed.footer = {
+            text: guild.members.resolve(user).displayName + ' shared this meme',
+          };
 
-          tc.send({ embed }).then(() => {
+          tc.send({ embeds: [embed] }).then(() => {
             // Check if video was included in description. If so then send that too
             if (embed.description) tc.send({ files: [embed.description] });
           });
@@ -209,10 +216,10 @@ export default class Bot {
       let embed = reaction.message.embeds[0];
       if (!embed.title || !embed.title.startsWith('​')) return;
 
-      if (event === 'messageReactionAdd') embed.fields.push({ name: 'Attendee', value: guild.member(user).displayName, inline: false });
-      else embed.fields = embed.fields.filter((field) => field.value !== guild.member(user).displayName);
+      if (event === 'messageReactionAdd') embed.fields.push({ name: 'Attendee', value: guild.members.resolve(user).displayName, inline: false });
+      else embed.fields = embed.fields.filter((field) => field.value !== guild.members.resolve(user).displayName);
 
-      reaction.message.edit(new MessageEmbed(embed)).then((_) => {
+      reaction.message.edit({ embeds: [embed] }).then((_) => {
         const index = this.events.findIndex((e) => e.time.valueOf() === embed.timestamp);
         if (index < 0) return;
 
@@ -229,7 +236,7 @@ export default class Bot {
       // Generate the embed to post to discord
       let embed = new MessageEmbed().setTitle('​' + parsed.eventTitle).setTimestamp(new Date(parsed.startDate).valueOf());
 
-      message.channel.send({ embed }).then((sent) => {
+      message.channel.send({ embeds: [embed] }).then((sent) => {
         sent.react('✅');
         if (parsed.startDate && new Date(parsed.startDate) > new Date())
           this.newEvent({ title: parsed.eventTitle, time: parsed.startDate, attendees: [], messageId: sent.id, channelId: message.channel.id });
@@ -269,7 +276,7 @@ export default class Bot {
       if (!this.premoves.has(userId)) {
         this.premoves.set(userId, []);
       }
-      
+
       const q = this.premoves.get(userId);
       q.push(premove_message);
       if (q.length > Bot.PREMOVE_QUEUE_SIZE) {
@@ -342,7 +349,7 @@ export default class Bot {
 
       var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'].splice(0, pollSize);
 
-      message.channel.send({ embed }).then((sent) => {
+      message.channel.send({ embeds: [embed] }).then((sent) => {
         emoteList.forEach((emote) => {
           sent.react(emote);
         });
@@ -405,7 +412,7 @@ export default class Bot {
           output = output.split('\n').slice(0, 20).join('\n');
           let embed = new MessageEmbed().setTitle('Output:');
           embed.setDescription('```\n' + output + '\n```');
-          message.channel.send(embed);
+          message.channel.send({ embeds: [embed] });
         })
         .catch((error) => {
           message.channel.send(error.data.message);
@@ -430,7 +437,7 @@ export default class Bot {
     command.on('vote', (message: Message) => {
       let embed = new MessageEmbed().setTitle(message.content);
 
-      message.channel.send({ embed }).then((sent) => {
+      message.channel.send({ embeds: [embed] }).then((sent) => {
         sent.react('✅');
         sent.react('❌');
       });
@@ -463,7 +470,7 @@ export default class Bot {
         const results = await GoogleSearchPlugin.search(message.content);
 
         let embed = new MessageEmbed().addFields(results);
-        message.channel.send({ embed });
+        message.channel.send({ embeds: [embed] });
       });
     });
 
@@ -473,23 +480,6 @@ export default class Bot {
       if (image) {
         message.channel.send({ files: [image] });
       }
-    });
-
-    command.on('transferemotes', (message: Message) => {
-      const emoteManager = message.guild.emojis;
-      const currentEmotes = emoteManager.cache.map((emote) => emote.name);
-      this.client.guilds
-        .fetch(message.content)
-        .then(function (guild) {
-          const emoteList = guild.emojis.cache.map((emote) => emote.name + '=https://cdn.discordapp.com/emojis/' + emote.id + '.png');
-          for (let i = 0; i < emoteList.length; i++) {
-            let emote = emoteList[i].split('=');
-            if (emote.length == 2 && !currentEmotes.includes(emote[0])) {
-              emoteManager.create(emote[1], emote[0]);
-            }
-          }
-        })
-        .catch(console.error);
     });
 
     command.on('cum', (message: Message) => {
@@ -639,7 +629,7 @@ export default class Bot {
         } else embed.image = { url: mediaUrl };
 
         const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
-        tc.send({ embed: embed }).then(() => {
+        tc.send({ embeds: [embed] }).then(() => {
           if (mediaUrl.endsWith('mp4')) tc.send({ files: [mediaUrl] });
         });
 

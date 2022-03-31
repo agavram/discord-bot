@@ -5,6 +5,7 @@
   "scripts": {
     "deploy": "tsc && pm2 start dist/app.js",
     "start:dev": "ts-node-dev --files src/app.ts",
+    "dev": "npm run start:dev",
     "build": "tsc"
   },
   "author": "adrian",
@@ -18,7 +19,7 @@
     "cheerio": "^1.0.0-rc.10",
     "cron": "^1.8.2",
     "discord-reply": "^0.1.2",
-    "discord.js": "^12.5.3",
+    "discord.js": "^13.6.0",
     "dotenv": "^8.6.0",
     "erlpack": "github:discordapp/erlpack",
     "jimp": "^0.16.1",
