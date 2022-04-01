@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import { execSync } from 'child_process';
-import { Client, Message, MessageEmbed, MessageReaction, User, TextChannel, Guild } from 'discord.js';
+import { Client, Message, MessageEmbed, MessageReaction, User, Guild, AnyChannel } from 'discord.js';
 require('discord-reply');
 import { MongoClient, Collection } from 'mongodb';
 import { EventEmitter } from 'events';
@@ -33,7 +33,7 @@ export default class Bot {
   serversCollection: Collection;
   usersCollection: Collection;
 
-  prefix: string = '!';
+  prefix = '!';
   events: Array<event> = [];
 
   dictionary: string[] = ['when', 'the', 'me'];
@@ -46,10 +46,20 @@ export default class Bot {
     const dm = new EventEmitter();
     const reaction = new EventEmitter();
 
-    this.Ready = new Promise((resolve, reject) => {
+    this.Ready = new Promise((resolve) => {
       this.client = new Client({
         partials: ['CHANNEL', 'MESSAGE', 'REACTION', 'GUILD_MEMBER', 'USER'],
-        intents: ['GUILDS', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_INVITES', 'GUILD_EMOJIS_AND_STICKERS', 'GUILD_BANS', 'DIRECT_MESSAGES', 'DIRECT_MESSAGE_REACTIONS'],
+        intents: [
+          'GUILDS',
+          'GUILD_MEMBERS',
+          'GUILD_MESSAGES',
+          'GUILD_MESSAGE_REACTIONS',
+          'GUILD_INVITES',
+          'GUILD_EMOJIS_AND_STICKERS',
+          'GUILD_BANS',
+          'DIRECT_MESSAGES',
+          'DIRECT_MESSAGE_REACTIONS',
+        ],
       });
       this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN), (this.animeDetector = new AnimeDetector());
 
@@ -57,7 +67,7 @@ export default class Bot {
         .then((client) => {
           this.mongoClient = client;
         })
-        .then((_) => {
+        .then(() => {
           const dbName: string = isProd() ? 'discord_bot' : 'discord_bot_testing';
           this.eventsCollection = this.mongoClient.db(dbName).collection('events');
           this.serversCollection = this.mongoClient.db(dbName).collection('servers');
@@ -118,8 +128,8 @@ export default class Bot {
     this.client.on('messageCreate', (message) => {
       if (message.author.bot) return;
 
-      let msg = message.content;
-      let msgLowerCase = msg.toLocaleLowerCase();
+      const msg = message.content;
+      const msgLowerCase = msg.toLocaleLowerCase();
 
       // Brazil
       if (message.guild.id === '856029113747111946') {
@@ -129,22 +139,22 @@ export default class Bot {
           message.react('<:mariners:857120069821530142>');
         }
         if (msgLowerCase === 'when') {
-          let reply: string = 'me when the ';
-          let length: number = Math.round(Math.random() * 88);
+          let reply = 'me when the ';
+          const length: number = Math.round(Math.random() * 88);
 
           while (reply.length < length) {
-            let index = Math.floor(Math.random() * this.dictionary.length);
+            const index = Math.floor(Math.random() * this.dictionary.length);
             reply += this.dictionary[index] + ' ';
           }
-          //@ts-ignore
+          // @ts-expect-error lineReplyNoMention is imported from discord-reply
           message.lineReplyNoMention(reply);
         }
       }
 
       const id = parseInt(message.author.id);
       if (this.premoves.has(id)) {
-        let reply: string = this.premoves.get(id).shift();
-        //@ts-ignore
+        const reply: string = this.premoves.get(id).shift();
+        // @ts-expect-error lineReplyNoMention is imported from discord-reply
         message.lineReplyNoMention(reply);
         if (!this.premoves.get(id).length) {
           this.premoves.delete(id);
@@ -183,14 +193,14 @@ export default class Bot {
     });
 
     reaction.on('upvote', (reaction: MessageReaction, user: User, guild: Guild, event) => {
-      let embed = reaction.message.embeds[0];
+      const embed = reaction.message.embeds[0];
       if (event !== 'messageReactionAdd' || !embed.author) return;
 
       this.serversCollection.findOne({ server: reaction.message.guild.id }).then((s) => {
-        let server = s as unknown as server;
+        const server = s as unknown as server;
         if (reaction.message.channel.id !== server.channelMemes) return;
 
-        const tc = this.client.channels.resolve(server.channelGeneral) as TextChannel;
+        const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelGeneral));
         tc.messages.fetch({ limit: 100 }).then(async (messages) => {
           if (
             messages.find((msg) => {
@@ -212,14 +222,14 @@ export default class Bot {
       });
     });
 
-    reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: String) => {
-      let embed = reaction.message.embeds[0];
+    reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: string) => {
+      const embed = reaction.message.embeds[0];
       if (!embed.title || !embed.title.startsWith('​')) return;
 
       if (event === 'messageReactionAdd') embed.fields.push({ name: 'Attendee', value: guild.members.resolve(user).displayName, inline: false });
       else embed.fields = embed.fields.filter((field) => field.value !== guild.members.resolve(user).displayName);
 
-      reaction.message.edit({ embeds: [embed] }).then((_) => {
+      reaction.message.edit({ embeds: [embed] }).then(() => {
         const index = this.events.findIndex((e) => e.time.valueOf() === embed.timestamp);
         if (index < 0) return;
 
@@ -234,7 +244,7 @@ export default class Bot {
       const parsed = parse(message.content);
 
       // Generate the embed to post to discord
-      let embed = new MessageEmbed().setTitle('​' + parsed.eventTitle).setTimestamp(new Date(parsed.startDate).valueOf());
+      const embed = new MessageEmbed().setTitle('​' + parsed.eventTitle).setTimestamp(new Date(parsed.startDate).valueOf());
 
       message.channel.send({ embeds: [embed] }).then((sent) => {
         sent.react('✅');
@@ -267,7 +277,7 @@ export default class Bot {
       }
 
       const userId = parseInt(split[0].trim());
-      if (userId == NaN) {
+      if (isNaN(userId)) {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
@@ -285,28 +295,28 @@ export default class Bot {
     });
 
     command.on('isanime', async (message: Message) => {
-      const urlMatch = /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)?/gi;
-      if (!message.content || !new RegExp(urlMatch).test(message.content)) {
+      const urlMatch = /[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)?/gi;
+      if (!message.content || !urlMatch.test(message.content)) {
         message.channel.send('Invalid URL');
         return;
       }
 
-      let res: any = await this.animeDetector.predict(message.content);
-      res = res.dataSync();
+      const res = await this.animeDetector.predict(message.content);
+      if (Array.isArray(res)) return message.channel.send('Unable to process image');
+      const d = res.dataSync;
 
-      if (res[0] < 0.1 && res[1] < 0.1) {
+      if (d[0] < 0.1 && d[1] < 0.1) {
         message.channel.send('Unknown');
         return;
       }
 
-      if (res[0] > res[1]) message.channel.send('Anime: ' + Math.round(res[0] * 100) + '% Confident');
-      else message.channel.send('Not Anime: ' + Math.round(res[1] * 100) + '% Confident');
+      if (d[0] > d[1]) message.channel.send('Anime: ' + Math.round(d[0] * 100) + '% Confident');
+      else message.channel.send('Not Anime: ' + Math.round(d[1] * 100) + '% Confident');
     });
 
     command.on('poll', (message: Message) => {
-      let pollSize: number;
       let title: string;
-      let choices: string = '';
+      let choices = '';
 
       let split = message.content.split(':');
       if (split.length < 2) {
@@ -337,7 +347,7 @@ export default class Bot {
       }
 
       // Creates poll contents, up to 10 choices
-      pollSize = Math.min(split.length, 10);
+      const pollSize = Math.min(split.length, 10);
       for (let i = 0; i < pollSize - 1; i++) {
         choices += i + 1 + ': ' + split[i] + '\n';
       }
@@ -345,9 +355,9 @@ export default class Bot {
       choices += split.length + ': ' + split[pollSize - 1];
 
       // Embeds, sends, and reacts
-      let embed = new MessageEmbed().setTitle(title).setDescription(choices);
+      const embed = new MessageEmbed().setTitle(title).setDescription(choices);
 
-      var emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'].splice(0, pollSize);
+      const emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'].splice(0, pollSize);
 
       message.channel.send({ embeds: [embed] }).then((sent) => {
         emoteList.forEach((emote) => {
@@ -359,10 +369,10 @@ export default class Bot {
     command.on('purge', (message: Message) => {
       if (message.author.id !== '213720243057590274') return;
 
-      const [first, second] = message.content.split(' ');
-      let [userId] = first.match(/[0-9]+/);
+      const [first] = message.content.split(' ');
+      const [userId] = first.match(/[0-9]+/);
 
-      const tc = message.channel as TextChannel;
+      const tc = this.resolveAsTextOrFail(message.channel);
       let messagesToDelete;
       tc.messages
         .fetch({ limit: 100 })
@@ -385,7 +395,7 @@ export default class Bot {
           });
         })
         .then(() => {
-          tc.bulkDelete(messagesToDelete);
+          if (tc.type === 'GUILD_TEXT') tc.bulkDelete(messagesToDelete);
           message.delete();
         });
     });
@@ -393,14 +403,14 @@ export default class Bot {
     command.on('run', (message: Message) => {
       message.content = message.content.replace(/`/g, '');
 
-      let lines = message.content.split('\n');
+      const lines = message.content.split('\n');
 
-      let language = lines[0];
+      const language = lines[0];
 
       // Remove language
       lines.shift();
 
-      let source = lines.join('\n');
+      const source = lines.join('\n');
 
       axios
         .post('https://emkc.org/api/v1/piston/execute', {
@@ -410,7 +420,7 @@ export default class Bot {
         .then((res) => {
           let output = res.data.output;
           output = output.split('\n').slice(0, 20).join('\n');
-          let embed = new MessageEmbed().setTitle('Output:');
+          const embed = new MessageEmbed().setTitle('Output:');
           embed.setDescription('```\n' + output + '\n```');
           message.channel.send({ embeds: [embed] });
         })
@@ -429,13 +439,13 @@ export default class Bot {
     });
 
     command.on('version', (message: Message) => {
-      let gitRevision = execSync('git rev-parse HEAD').toString().trim();
-      let time = new Date(parseInt(execSync('git log -1 --format=%ct').toString()) * 1000).toLocaleString('en-US');
+      const gitRevision = execSync('git rev-parse HEAD').toString().trim();
+      const time = new Date(parseInt(execSync('git log -1 --format=%ct').toString()) * 1000).toLocaleString('en-US');
       message.channel.send(`\`${gitRevision}\` from ${time}`);
     });
 
     command.on('vote', (message: Message) => {
-      let embed = new MessageEmbed().setTitle(message.content);
+      const embed = new MessageEmbed().setTitle(message.content);
 
       message.channel.send({ embeds: [embed] }).then((sent) => {
         sent.react('✅');
@@ -444,8 +454,8 @@ export default class Bot {
     });
 
     command.on('phonetic', (message: Message) => {
-      let input = message.content.trim();
-      let output: string = '';
+      const input = message.content.trim();
+      let output = '';
 
       for (let i = 0; i < input.length; i++) {
         if (phonetics[input.charAt(i).toUpperCase()]) output += phonetics[input.charAt(i).toUpperCase()] + ' ';
@@ -469,7 +479,7 @@ export default class Bot {
 
         const results = await GoogleSearchPlugin.search(message.content);
 
-        let embed = new MessageEmbed().addFields(results);
+        const embed = new MessageEmbed().addFields(results);
         message.channel.send({ embeds: [embed] });
       });
     });
@@ -483,8 +493,8 @@ export default class Bot {
     });
 
     command.on('cum', (message: Message) => {
-      let length: number = 1 + Math.round(Math.random() * 9);
-      let ben: string = '8';
+      const length: number = 1 + Math.round(Math.random() * 9);
+      let ben = '8';
       for (let i = 0; i < length; i++) {
         ben += '=';
       }
@@ -498,7 +508,7 @@ export default class Bot {
         channelAnon: message.content,
       };
 
-      this.usersCollection.updateOne({ userId: user.userId }, { $set: user }, { upsert: true }).then((_) => {
+      this.usersCollection.updateOne({ userId: user.userId }, { $set: user }, { upsert: true }).then(() => {
         message.channel.send('Channel ID successfully set');
       });
     });
@@ -534,10 +544,9 @@ export default class Bot {
             if (!servers) throw new Error('Unable to fetch servers');
 
             servers.forEach((server) => {
-              this.client.channels
-                .resolve(server.channelMariners)
-                //@ts-ignore
-                .send(`${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`);
+              this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners)).send(
+                `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`,
+              );
             });
 
             const highlightsPosted: string[] = [];
@@ -556,7 +565,7 @@ export default class Bot {
                 try {
                   servers.forEach(async (server) => {
                     this.client.channels.resolve(server.channelMariners);
-                    const channel = this.client.channels.resolve(server.channelMariners) as TextChannel;
+                    const channel = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
                     await channel.send(update.blurb);
                     await channel.send(update.playbacks[0].url);
                   });
@@ -580,16 +589,23 @@ export default class Bot {
     }
   }
 
+  private resolveAsTextOrFail(channel: AnyChannel) {
+    if (channel.isText()) {
+      return channel;
+    } else {
+      console.error(`${channel} did not resolve to a text or thread channel`);
+    }
+  }
+
   private updateEvent(time: Date, attendees: Array<string>) {
     this.eventsCollection.updateOne({ time: time }, { $set: { attendees } });
   }
 
   private async sendMeme(servers: Array<server>) {
-    let res = await axios.get('https://www.reddit.com/r/dankmemes/hot.json');
+    const res = await axios.get('https://www.reddit.com/r/dankmemes/hot.json');
     if (res.status >= 400) {
       servers.forEach((server) => {
-        //@ts-ignore
-        this.client.channels.resolve(server.channelMemes).send('Reddit is down with status code: ' + res.status);
+        this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes)).send('Reddit is down with status code: ' + res.status);
       });
       return;
     }
@@ -611,16 +627,16 @@ export default class Bot {
         let mediaUrl: string = post.url;
 
         // Generate the embed to post to discord
-        let embed = new MessageEmbed()
+        const embed = new MessageEmbed()
           .setColor(this.redditColor)
           .setTitle(post.title)
           .setURL('https://www.reddit.com' + post.permalink)
           .setTimestamp(post.created_utc * 1000)
-          .setAuthor(
-            post.author,
-            'https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png',
-            'https://www.reddit.com/u/' + post.author,
-          );
+          .setAuthor({
+            name: post.author,
+            iconURL: 'https://cdn.discordapp.com/attachments/486983846815072256/734930339209805885/reddit-icon.png',
+            url: 'https://www.reddit.com/u/' + post.author,
+          });
 
         // Check if post is video from imgur. gifv is proprietary so change the url to mp4
         if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
@@ -628,7 +644,7 @@ export default class Bot {
           embed.description = mediaUrl;
         } else embed.image = { url: mediaUrl };
 
-        const tc = this.client.channels.resolve(server.channelMemes) as TextChannel;
+        const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes));
         tc.send({ embeds: [embed] }).then(() => {
           if (mediaUrl.endsWith('mp4')) tc.send({ files: [mediaUrl] });
         });
@@ -643,15 +659,15 @@ export default class Bot {
       time,
       async () => {
         const event = this.events[this.events.findIndex((e) => e.time === time)];
-        const channel = (await this.client.channels.fetch(event.channelId)) as TextChannel;
+        const channel = this.resolveAsTextOrFail(await this.client.channels.fetch(event.channelId));
         const message = await channel.messages.fetch(event.messageId);
 
-        let mentions: string[] = [];
+        const mentions: string[] = [];
         event.attendees.forEach(async (attendee) => {
           mentions.push(`<@${attendee}>`);
         });
 
-        // @ts-ignore
+        // @ts-expect-error lineReplyNoMention is imported from discord-reply
         message.lineReplyNoMention(mentions.join(' '));
         this.eventsCollection.deleteOne({ time: time });
       },

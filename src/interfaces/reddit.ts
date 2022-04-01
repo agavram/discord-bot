@@ -29,12 +29,9 @@ export interface Resolution {
   height: number;
 }
 
-export interface Variants {}
-
 export interface Image {
   source: Source;
   resolutions: Resolution[];
-  variants: Variants;
   id: string;
 }
 
@@ -83,10 +80,10 @@ export interface AllAwarding {
   resized_icons: ResizedIcon[];
   icon_width: number;
   static_icon_width: number;
-  start_date?: any;
+  start_date?: Date;
   is_enabled: boolean;
   description: string;
-  end_date?: any;
+  end_date?: Date;
   subreddit_coin_reward: number;
   count: number;
   static_icon_height: number;
@@ -100,12 +97,12 @@ export interface AllAwarding {
 }
 
 export interface Data2 {
-  approved_at_utc?: any;
+  approved_at_utc?: Date;
   subreddit: string;
   selftext: string;
   author_fullname: string;
   saved: boolean;
-  mod_reason_title?: any;
+  mod_reason_title?: string;
   gilded: number;
   clicked: boolean;
   title: string;
@@ -116,7 +113,6 @@ export interface Data2 {
   link_flair_css_class: string;
   downs: number;
   thumbnail_height: number;
-  top_awarded_type?: any;
   hide_score: boolean;
   name: string;
   quarantine: boolean;
@@ -129,15 +125,11 @@ export interface Data2 {
   thumbnail_width: number;
   author_flair_template_id: string;
   is_original_content: boolean;
-  user_reports: any[];
-  secure_media?: any;
   is_reddit_media_domain: boolean;
   is_meta: boolean;
-  category?: any;
   link_flair_text: string;
   can_mod_post: boolean;
   score: number;
-  approved_by?: any;
   author_premium: boolean;
   thumbnail: string;
   edited: boolean;
@@ -145,23 +137,15 @@ export interface Data2 {
   author_flair_richtext: AuthorFlairRichtext[];
   gildings: Gildings;
   post_hint: string;
-  content_categories?: any;
   is_self: boolean;
-  mod_note?: any;
   created: number;
   link_flair_type: string;
   wls: number;
-  removed_by_category?: any;
-  banned_by?: any;
   author_flair_type: string;
   domain: string;
   allow_live_comments: boolean;
-  selftext_html?: any;
-  likes?: any;
   suggested_sort: string;
-  banned_at_utc?: any;
   url_overridden_by_dest: string;
-  view_count?: any;
   archived: boolean;
   no_follow: boolean;
   is_crosspostable: boolean;
@@ -169,32 +153,22 @@ export interface Data2 {
   over_18: boolean;
   preview: Preview;
   all_awardings: AllAwarding[];
-  awarders: any[];
   media_only: boolean;
   link_flair_template_id: string;
   can_gild: boolean;
   spoiler: boolean;
   locked: boolean;
   author_flair_text: string;
-  treatment_tags: any[];
   visited: boolean;
-  removed_by?: any;
-  num_reports?: any;
-  distinguished?: any;
   subreddit_id: string;
-  mod_reason_by?: any;
-  removal_reason?: any;
   link_flair_background_color: string;
   id: string;
   is_robot_indexable: boolean;
-  report_reasons?: any;
   author: string;
-  discussion_type?: any;
   num_comments: number;
   send_replies: boolean;
   whitelist_status: string;
   contest_mode: boolean;
-  mod_reports: any[];
   author_patreon_flair: boolean;
   author_flair_text_color: string;
   permalink: string;
@@ -204,7 +178,6 @@ export interface Data2 {
   subreddit_subscribers: number;
   created_utc: number;
   num_crossposts: number;
-  media?: any;
   is_video: boolean;
 }
 
@@ -218,7 +191,6 @@ export interface Data {
   dist: number;
   children: Child[];
   after: string;
-  before?: any;
 }
 
 export interface RootObject {

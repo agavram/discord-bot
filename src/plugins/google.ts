@@ -1,4 +1,3 @@
-import * as puppeteer from 'puppeteer';
 import { load } from 'cheerio';
 import { EmbedFieldData } from 'discord.js';
 import { PuppeteerBrowser } from './chrome';
@@ -15,7 +14,7 @@ export class GoogleSearchPlugin {
 
     const html = await page.content();
 
-    let results: EmbedFieldData[] = [];
+    const results: EmbedFieldData[] = [];
     const $ = load(html);
     $('h3.LC20lb')
       .toArray()

@@ -6,18 +6,16 @@ export class AnimeDetector {
   readonly imageSize: number = 224;
   model: tf.GraphModel;
 
-  constructor() {}
-
   async initialize(): Promise<void> {
     this.model = await tf.loadGraphModel('file://./src/ml_model/model.json');
     resolve();
   }
 
   public async predict(url) {
-    let image = await Jimp.read(url);
+    const image = await Jimp.read(url);
     image.resize(this.imageSize, this.imageSize);
 
-    let imgData = [];
+    const imgData = [];
 
     for (let i = 0; i < this.imageSize; i++) {
       imgData.push([]);

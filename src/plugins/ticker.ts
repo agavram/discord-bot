@@ -1,7 +1,7 @@
 import * as puppeteer from 'puppeteer';
 
 export class RobinHoodPlugin {
-  public static async fetchTicker(query: string, timeLength: string = '1D') {
+  public static async fetchTicker(query: string, timeLength = '1D') {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.setViewport({ width: 960, height: 540, deviceScaleFactor: 2 });
