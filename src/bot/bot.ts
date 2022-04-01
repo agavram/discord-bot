@@ -19,6 +19,9 @@ import { RobinHoodPlugin } from '../plugins/ticker';
 import { AnimeDetector } from '../plugins/anime-detector';
 import * as moment from 'moment';
 import { orderBy } from 'lodash';
+import { GameStatus } from '../interfaces/game-status';
+import { GameUpdates } from '../interfaces/game-updates';
+import { GameSchedule } from '../interfaces/game-schedule'
 
 export default class Bot {
   public Ready: Promise<void>;
@@ -521,11 +524,11 @@ export default class Bot {
   }
 
   private async notifyMariners() {
-    const res = await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1');
-    if (!res.data?.dates || !res.data?.dates.length) {
+    const schedule : GameSchedule = (await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1')).data;
+    if (!schedule.dates || !schedule.dates.length) {
       return;
     }
-    const games = res.data?.dates[0].games;
+    const games = schedule.dates[0].games;
 
     console.log('Currently: ' + new Date().toLocaleTimeString());
 
@@ -552,14 +555,17 @@ export default class Bot {
             const highlightsPosted: string[] = [];
 
             const ping = setInterval(async () => {
-              const status = (await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${game.gamePk}&useLatestGames=true&language=en`)).data
-                .dates[0].games[0].status;
+              const gamesStatus: GameStatus = (
+                await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${game.gamePk}&useLatestGames=true&language=en`)
+              ).data;
+              const status = gamesStatus.dates[0].games[0].status;
 
-              let updates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data.highlights.highlights.items;
-              updates = orderBy(updates, (update) => new Date(update.date), 'asc');
+              const gameUpdates: GameUpdates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data;
+              let highlights = gameUpdates.highlights.highlights.items;
+              highlights = orderBy(highlights, (update) => new Date(update.date), 'asc');
 
-              for (let i = 0; i < updates.length; i++) {
-                const update = updates[i];
+              for (let i = 0; i < highlights.length; i++) {
+                const update = highlights[i];
                 if (highlightsPosted.includes(update.id)) continue;
 
                 try {
@@ -579,7 +585,9 @@ export default class Bot {
                 }
               }
 
-              if (status.abstractGameState === 'Final') clearInterval(ping);
+              if (status.abstractGameState === 'Final') {
+                clearInterval(ping);
+              }
             }, 1000 * 60);
           },
           null,
