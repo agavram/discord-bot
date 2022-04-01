@@ -68,7 +68,7 @@ export default class Bot {
           this.mongoClient = client;
         })
         .then(() => {
-          const dbName: string = isProd() ? 'discord_bot' : 'discord_bot_testing';
+          const dbName: string = process.env.DB_NAME;
           this.eventsCollection = this.mongoClient.db(dbName).collection('events');
           this.serversCollection = this.mongoClient.db(dbName).collection('servers');
           this.usersCollection = this.mongoClient.db(dbName).collection('users');
