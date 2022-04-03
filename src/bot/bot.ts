@@ -70,7 +70,7 @@ export default class Bot {
             channelGeneral: { type: String, required: true },
             channelMemes: { type: String, required: true },
             channelLogging: { type: String, required: true },
-            channelMariners: { type: String, required: true },
+            channelMariners: { type: String },
             posts: { type: [String], required: true },
           }),
         );
