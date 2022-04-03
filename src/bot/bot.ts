@@ -4,15 +4,14 @@ dotenv.config();
 import { execSync } from 'child_process';
 import { Client, Message, MessageEmbed, MessageReaction, User, Guild, AnyChannel } from 'discord.js';
 require('discord-reply');
-import { MongoClient, Collection } from 'mongodb';
+import * as mongoose from 'mongoose';
 import { EventEmitter } from 'events';
 import { job } from 'cron';
 import { Data2, Child } from '../interfaces/reddit';
-import { server, event, user } from '../interfaces/database';
+import { server, user } from '../interfaces/database';
 import { isProd } from '../helpers/functions';
 import axios from 'axios';
 import { phonetics } from '../helpers/phonetic-alphabet';
-import { parse } from 'sherlockjs';
 import { GoogleSearchPlugin } from '../plugins/google';
 import { LatexConverter } from '../plugins/latex';
 import { RobinHoodPlugin } from '../plugins/ticker';
@@ -21,7 +20,7 @@ import * as moment from 'moment';
 import { orderBy } from 'lodash';
 import { GameStatus } from '../interfaces/game-status';
 import { GameUpdates } from '../interfaces/game-updates';
-import { GameSchedule } from '../interfaces/game-schedule'
+import { GameSchedule } from '../interfaces/game-schedule';
 
 export default class Bot {
   public Ready: Promise<void>;
@@ -29,15 +28,12 @@ export default class Bot {
   static readonly PREMOVE_QUEUE_SIZE: number = 10;
 
   client: Client;
-  mongoClient: MongoClient;
   animeDetector: AnimeDetector;
 
-  eventsCollection: Collection;
-  serversCollection: Collection;
-  usersCollection: Collection;
+  servers: mongoose.Model<server>;
+  users: mongoose.Model<user>;
 
   prefix = '!';
-  events: Array<event> = [];
 
   dictionary: string[] = ['when', 'the', 'me'];
   premoves: Map<number, string[]> = new Map<number, string[]>();
@@ -66,66 +62,63 @@ export default class Bot {
       });
       this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN), (this.animeDetector = new AnimeDetector());
 
-      MongoClient.connect(process.env.MONGODB_URI)
-        .then((client) => {
-          this.mongoClient = client;
-        })
-        .then(() => {
-          const dbName: string = process.env.DB_NAME;
-          this.eventsCollection = this.mongoClient.db(dbName).collection('events');
-          this.serversCollection = this.mongoClient.db(dbName).collection('servers');
-          this.usersCollection = this.mongoClient.db(dbName).collection('users');
+      mongoose.connect(process.env.MONGODB_URI).then(() => {
+        this.servers = mongoose.model(
+          'servers',
+          new mongoose.Schema<server>({
+            server: { type: String, required: true },
+            channelGeneral: { type: String, required: true },
+            channelMemes: { type: String, required: true },
+            channelLogging: { type: String, required: true },
+            channelMariners: { type: String, required: true },
+            posts: { type: [String], required: true },
+          }),
+        );
 
-          this.eventsCollection.deleteMany({ time: { $lt: new Date() } }).then(() => {
-            this.eventsCollection
-              .find({})
-              .toArray()
-              .then((docs: unknown) => {
-                this.events = docs as event[];
-                this.events.forEach((event) => {
-                  this.scheduleEventJob(event.time);
-                });
-              });
-          });
-          this.animeDetector.initialize();
+        this.users = mongoose.model(
+          'users',
+          new mongoose.Schema<user>({
+            userId: { type: String, required: true },
+            sentAttachments: { type: Number, required: true },
+          }),
+        );
 
-          this.client.once('ready', () => {
-            job(
-              '0,30 * * * *',
-              () => {
-                this.serversCollection
-                  .find({})
-                  .toArray()
-                  .then((servers: unknown) => this.sendMeme(servers as server[]));
-              },
-              null,
-              true,
-            );
+        this.animeDetector.initialize();
 
-            job(
-              '0 0 * * *',
-              () => {
-                this.usersCollection.updateMany({}, { $set: { sentAttachments: 0 } });
-              },
-              null,
-              true,
-            );
+        this.client.once('ready', () => {
+          job(
+            '0,30 * * * *',
+            () => {
+              this.servers.find().then((servers) => this.sendMeme(servers));
+            },
+            null,
+            true,
+          );
 
-            job(
-              '0 10 * * *',
-              () => {
-                this.notifyMariners();
-              },
-              null,
-              true,
-              null,
-              null,
-              true,
-            );
+          job(
+            '0 0 * * *',
+            () => {
+              this.users.updateMany({ $set: { sentAttachments: 0 } });
+            },
+            null,
+            true,
+          );
 
-            resolve();
-          });
+          job(
+            '0 10 * * *',
+            () => {
+              this.notifyMariners();
+            },
+            null,
+            true,
+            null,
+            null,
+            true,
+          );
+
+          resolve();
         });
+      });
     });
 
     this.client.on('messageCreate', (message) => {
@@ -199,8 +192,7 @@ export default class Bot {
       const embed = reaction.message.embeds[0];
       if (event !== 'messageReactionAdd' || !embed.author) return;
 
-      this.serversCollection.findOne({ server: reaction.message.guild.id }).then((s) => {
-        const server = s as unknown as server;
+      this.servers.findOne({ server: reaction.message.guild.id }).then((server) => {
         if (reaction.message.channel.id !== server.channelMemes) return;
 
         const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelGeneral));
@@ -222,37 +214,6 @@ export default class Bot {
             if (embed.description) tc.send({ files: [embed.description] });
           });
         });
-      });
-    });
-
-    reaction.on('✅', (reaction: MessageReaction, user: User, guild: Guild, event: string) => {
-      const embed = reaction.message.embeds[0];
-      if (!embed.title || !embed.title.startsWith('​')) return;
-
-      if (event === 'messageReactionAdd') embed.fields.push({ name: 'Attendee', value: guild.members.resolve(user).displayName, inline: false });
-      else embed.fields = embed.fields.filter((field) => field.value !== guild.members.resolve(user).displayName);
-
-      reaction.message.edit({ embeds: [embed] }).then(() => {
-        const index = this.events.findIndex((e) => e.time.valueOf() === embed.timestamp);
-        if (index < 0) return;
-
-        event === 'messageReactionAdd'
-          ? this.events[index].attendees.push(user.id)
-          : (this.events[index].attendees = this.events[index].attendees.filter((a) => a != user.id));
-        this.updateEvent(new Date(embed.timestamp), this.events[index].attendees);
-      });
-    });
-
-    command.on('event', (message: Message) => {
-      const parsed = parse(message.content);
-
-      // Generate the embed to post to discord
-      const embed = new MessageEmbed().setTitle('​' + parsed.eventTitle).setTimestamp(new Date(parsed.startDate).valueOf());
-
-      message.channel.send({ embeds: [embed] }).then((sent) => {
-        sent.react('✅');
-        if (parsed.startDate && new Date(parsed.startDate) > new Date())
-          this.newEvent({ title: parsed.eventTitle, time: parsed.startDate, attendees: [], messageId: sent.id, channelId: message.channel.id });
       });
     });
 
@@ -433,12 +394,7 @@ export default class Bot {
     });
 
     command.on('sendmeme', (message: Message) => {
-      if (message.author.id === '213720243057590274') {
-        this.serversCollection
-          .find({})
-          .toArray()
-          .then((servers: unknown) => this.sendMeme(servers as server[]));
-      }
+      if (message.author.id === '213720243057590274') this.servers.find().then((servers) => this.sendMeme(servers));
     });
 
     command.on('version', (message: Message) => {
@@ -460,10 +416,10 @@ export default class Bot {
       const input = message.content.trim();
       let output = '';
 
-      for (let i = 0; i < input.length; i++) {
-        if (phonetics[input.charAt(i).toUpperCase()]) output += phonetics[input.charAt(i).toUpperCase()] + ' ';
-        else if (input.charAt(i) == ' ') output = output.substring(0, output.length - 1) + '|';
-        else output = output.substring(0, output.length - 1) + input.charAt(i);
+      for (const c of input) {
+        if (phonetics[c.toUpperCase()]) output += phonetics[c.toUpperCase()] + ' ';
+        else if (c == ' ') output = output.substring(0, output.length - 1) + '|';
+        else output = output.substring(0, output.length - 1) + c;
       }
 
       message.channel.send(output);
@@ -474,10 +430,9 @@ export default class Bot {
     });
 
     command.on('search', async (message: Message) => {
-      this.serversCollection.findOne({ server: message.guild.id }).then(async (server) => {
+      this.servers.findOne({ server: message.guild.id }).then(async (server) => {
         if (server.channelGeneral === message.channel.id) {
-          message.channel.send('no');
-          return;
+          return message.channel.send('no');
         }
 
         const results = await GoogleSearchPlugin.search(message.content);
@@ -504,33 +459,12 @@ export default class Bot {
       ben += 'D💦';
       message.channel.send(ben);
     });
-
-    dm.on('channel', async (message: Message) => {
-      const user: user = {
-        userId: message.author.id,
-        channelAnon: message.content,
-      };
-
-      this.usersCollection.updateOne({ userId: user.userId }, { $set: user }, { upsert: true }).then(() => {
-        message.channel.send('Channel ID successfully set');
-      });
-    });
-  }
-
-  private newEvent(event: event) {
-    this.eventsCollection.insertOne(event as unknown);
-    this.events.push(event);
-    this.scheduleEventJob(event.time);
   }
 
   private async notifyMariners() {
-    const schedule : GameSchedule = (await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1')).data;
-    if (!schedule.dates || !schedule.dates.length) {
-      return;
-    }
+    const schedule: GameSchedule = (await axios.get('http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1')).data;
+    if (!schedule.dates || !schedule.dates.length) return;
     const games = schedule.dates[0].games;
-
-    console.log('Currently: ' + new Date().toLocaleTimeString());
 
     for (const game of games ?? []) {
       if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
@@ -538,12 +472,11 @@ export default class Bot {
         if (gameStart < new Date()) return;
 
         const notificationTime = new Date(gameStart.getTime() - 1000 * 60 * 10);
-        // TODO: Remove this logging
         console.log('Notifying for game at: ' + notificationTime.toString());
         job(
           notificationTime,
           async () => {
-            const servers = (await this.serversCollection.find({ channelMariners: { $exists: true } }).toArray()) as unknown as server[];
+            const servers = await this.servers.find({ channelMariners: { $exists: true } });
             if (!servers) throw new Error('Unable to fetch servers');
 
             servers.forEach((server) => {
@@ -558,7 +491,7 @@ export default class Bot {
               const gamesStatus: GameStatus = (
                 await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${game.gamePk}&useLatestGames=true&language=en`)
               ).data;
-              const status = gamesStatus.dates[0].games[0].status;
+              const gameData = gamesStatus.dates[0].games[0];
 
               const gameUpdates: GameUpdates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data;
               let highlights = gameUpdates.highlights.highlights.items;
@@ -585,7 +518,14 @@ export default class Bot {
                 }
               }
 
-              if (status.abstractGameState === 'Final') {
+              if (gameData.status.abstractGameState === 'Final') {
+                servers.forEach(async (server) => {
+                  this.client.channels.resolve(server.channelMariners);
+                  const c = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
+                  const t = gameData.teams;
+                  await c.send(`${t.home.team.name} ${t.home.score}
+                              - ${t.away.team.name} ${t.away.score}`);
+                });
                 clearInterval(ping);
               }
             }, 1000 * 60);
@@ -598,19 +538,16 @@ export default class Bot {
   }
 
   private resolveAsTextOrFail(channel: AnyChannel) {
-    if (channel.isText()) {
-      return channel;
-    } else {
-      console.error(`${channel} did not resolve to a text or thread channel`);
-    }
+    if (channel.isText()) return channel;
+    else console.error(`${channel} did not resolve to a text or thread channel`);
   }
 
-  private updateEvent(time: Date, attendees: Array<string>) {
-    this.eventsCollection.updateOne({ time: time }, { $set: { attendees } });
-  }
-
-  private async sendMeme(servers: Array<server>) {
-    const res = await axios.get('https://www.reddit.com/r/dankmemes/hot.json');
+  private async sendMeme(
+    servers: (server & {
+      _id: mongoose.Types.ObjectId;
+    })[],
+  ) {
+    const res = await axios.get('https://www.reddit.com/r/whenthe/hot.json');
     if (res.status >= 400) {
       servers.forEach((server) => {
         this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes)).send('Reddit is down with status code: ' + res.status);
@@ -629,7 +566,7 @@ export default class Bot {
         if (server.posts.length > 48) server.posts.shift();
 
         server.posts.push(post.id);
-        this.serversCollection.updateOne({ _id: server._id }, { $set: { posts: server.posts } });
+        this.servers.updateOne({ _id: server._id }, { $set: { posts: server.posts } });
 
         // Attempt to get an image
         let mediaUrl: string = post.url;
@@ -660,27 +597,5 @@ export default class Bot {
         break;
       }
     });
-  }
-
-  private scheduleEventJob(time: Date) {
-    job(
-      time,
-      async () => {
-        const event = this.events[this.events.findIndex((e) => e.time === time)];
-        const channel = this.resolveAsTextOrFail(await this.client.channels.fetch(event.channelId));
-        const message = await channel.messages.fetch(event.messageId);
-
-        const mentions: string[] = [];
-        event.attendees.forEach(async (attendee) => {
-          mentions.push(`<@${attendee}>`);
-        });
-
-        // @ts-expect-error lineReplyNoMention is imported from discord-reply
-        message.lineReplyNoMention(mentions.join(' '));
-        this.eventsCollection.deleteOne({ time: time });
-      },
-      null,
-      true,
-    );
   }
 }
