@@ -543,9 +543,10 @@ export default class Bot {
   }
 
   private async sendMeme(
-    servers: (server & {
-      _id: mongoose.Types.ObjectId;
-    })[],
+    servers: (mongoose.Document<unknown, unknown, server> &
+      server & {
+        _id: mongoose.Types.ObjectId;
+      })[],
   ) {
     const res = await axios.get('https://www.reddit.com/r/whenthe/hot.json');
     if (res.status >= 400) {
@@ -566,7 +567,7 @@ export default class Bot {
         if (server.posts.length > 48) server.posts.shift();
 
         server.posts.push(post.id);
-        this.servers.updateOne({ _id: server._id }, { $set: { posts: server.posts } });
+        server.save();
 
         // Attempt to get an image
         let mediaUrl: string = post.url;
