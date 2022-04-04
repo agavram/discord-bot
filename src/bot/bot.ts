@@ -1,26 +1,26 @@
-import * as dotenv from 'dotenv';
-dotenv.config();
-
-import { execSync } from 'child_process';
-import { Client, Message, MessageEmbed, MessageReaction, User, Guild, AnyChannel } from 'discord.js';
-require('discord-reply');
-import * as mongoose from 'mongoose';
-import { EventEmitter } from 'events';
-import { job } from 'cron';
-import { Data2, Child } from '../interfaces/reddit';
-import { server, user } from '../interfaces/database';
-import { isProd } from '../helpers/functions';
 import axios from 'axios';
+import { execSync } from 'child_process';
+import { job } from 'cron';
+import { AnyChannel, Client, Guild, Message, MessageEmbed, MessageReaction, User } from 'discord.js';
+import * as dotenv from 'dotenv';
+import { EventEmitter } from 'events';
+import { orderBy, some } from 'lodash';
+import * as moment from 'moment';
+import * as mongoose from 'mongoose';
+import { isProd } from '../helpers/functions';
 import { phonetics } from '../helpers/phonetic-alphabet';
+import { game, server, user } from '../interfaces/database';
+import { Game, GameSchedule } from '../interfaces/game-schedule';
+import { GameStatus } from '../interfaces/game-status';
+import { GameUpdates } from '../interfaces/game-updates';
+import { Child, Data2 } from '../interfaces/reddit';
+import { AnimeDetector } from '../plugins/anime-detector';
 import { GoogleSearchPlugin } from '../plugins/google';
 import { LatexConverter } from '../plugins/latex';
 import { RobinHoodPlugin } from '../plugins/ticker';
-import { AnimeDetector } from '../plugins/anime-detector';
-import * as moment from 'moment';
-import { orderBy } from 'lodash';
-import { GameStatus } from '../interfaces/game-status';
-import { GameUpdates } from '../interfaces/game-updates';
-import { GameSchedule } from '../interfaces/game-schedule';
+dotenv.config();
+
+require('discord-reply');
 
 export default class Bot {
   public Ready: Promise<void>;
@@ -32,6 +32,7 @@ export default class Bot {
 
   servers: mongoose.Model<server>;
   users: mongoose.Model<user>;
+  gameHighlights: mongoose.Model<game>;
 
   prefix = '!';
 
@@ -83,6 +84,15 @@ export default class Bot {
           }),
         );
 
+        this.gameHighlights = mongoose.model(
+          'gameHighlights',
+          new mongoose.Schema<game>({
+            highlightId: { type: String, required: true },
+            gameId: { type: Number, required: true },
+            gameStart: { type: Date, required: true },
+          }),
+        );
+
         this.animeDetector.initialize();
 
         this.client.once('ready', () => {
@@ -98,7 +108,7 @@ export default class Bot {
           job(
             '0 0 * * *',
             () => {
-              this.users.updateMany({ $set: { sentAttachments: 0 } });
+              this.users.updateMany({}, { $set: { sentAttachments: 0 } });
             },
             null,
             true,
@@ -469,72 +479,85 @@ export default class Bot {
     for (const game of games ?? []) {
       if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
         const gameStart = new Date(game.gameDate);
-        if (gameStart < new Date()) return;
+        if (gameStart < new Date()) {
+          return this.postHighlightsForGame(game);
+        }
 
         const notificationTime = new Date(gameStart.getTime() - 1000 * 60 * 10);
         console.log('Notifying for game at: ' + notificationTime.toString());
         job(
           notificationTime,
-          async () => {
-            const servers = await this.servers.find({ channelMariners: { $exists: true } });
-            if (!servers) throw new Error('Unable to fetch servers');
-
-            servers.forEach((server) => {
-              this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners)).send(
-                `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(gameStart).format('h:mm A')}`,
-              );
-            });
-
-            const highlightsPosted: string[] = [];
-
-            const ping = setInterval(async () => {
-              const gamesStatus: GameStatus = (
-                await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${game.gamePk}&useLatestGames=true&language=en`)
-              ).data;
-              const gameData = gamesStatus.dates[0].games[0];
-
-              const gameUpdates: GameUpdates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data;
-              let highlights = gameUpdates.highlights.highlights.items;
-              highlights = orderBy(highlights, (update) => new Date(update.date), 'asc');
-
-              for (let i = 0; i < highlights.length; i++) {
-                const update = highlights[i];
-                if (highlightsPosted.includes(update.id)) continue;
-
-                try {
-                  servers.forEach(async (server) => {
-                    this.client.channels.resolve(server.channelMariners);
-                    const channel = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
-                    await channel.send(update.blurb);
-                    await channel.send(update.playbacks[0].url);
-                  });
-
-                  highlightsPosted.push(update.id);
-                } catch (error) {
-                  console.error(error);
-                  console.error('Could not send message');
-                  console.error(update.blurb);
-                  console.error(update.playbacks[0].url);
-                }
-              }
-
-              if (gameData.status.abstractGameState === 'Final') {
-                servers.forEach(async (server) => {
-                  this.client.channels.resolve(server.channelMariners);
-                  const c = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
-                  const t = gameData.teams;
-                  await c.send(`${t.home.team.name} ${t.home.score}
-                              - ${t.away.team.name} ${t.away.score}`);
-                });
-                clearInterval(ping);
-              }
-            }, 1000 * 60);
+          () => {
+            this.postHighlightsForGame(game);
           },
           null,
           true,
         );
       }
     }
+  }
+
+  private async postHighlightsForGame(game: Game) {
+    const servers = await this.servers.find({ channelMariners: { $exists: true } });
+    if (!servers) throw new Error('Unable to fetch servers');
+
+    const isGameOver = async (gamePk: number) => {
+      const gamesStatus: GameStatus = (await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk=${gamePk}&useLatestGames=true&language=en`))
+        .data;
+      const gameData = gamesStatus.dates[0].games[0];
+      if (gameData.status.abstractGameState === 'Final') return gameData;
+      return false;
+    };
+
+    if (!isGameOver(game.gamePk)) {
+      servers.forEach((server) => {
+        this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners)).send(
+          `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(game.gameDate).format('h:mm A')}`,
+        );
+      });
+    }
+
+    await this.gameHighlights.deleteMany({ gameId: { $ne: game.gamePk } });
+
+    const ping = setInterval(async () => {
+      const gameUpdates: GameUpdates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data;
+      let highlights = gameUpdates.highlights.highlights.items;
+      highlights = orderBy(highlights, (update) => new Date(update.date), 'asc');
+
+      const highlightsPosted = await this.gameHighlights.find({ gameId: game.gamePk });
+      for (const update of highlights) {
+        if (some(highlightsPosted, (h) => h.highlightId === update.id)) continue;
+
+        await this.gameHighlights.create({
+          gameId: game.gamePk,
+          gameStart: game.gameDate,
+          highlightId: update.id,
+        });
+
+        try {
+          servers.forEach(async (server) => {
+            this.client.channels.resolve(server.channelMariners);
+            const channel = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
+            await channel.send(update.blurb + '\n' + update.playbacks[0].url);
+          });
+        } catch (error) {
+          console.error(error);
+          console.error('Could not send message');
+          console.error(update.blurb);
+          console.error(update.playbacks[0].url);
+        }
+      }
+
+      const gameData = await isGameOver(game.gamePk);
+      if (gameData) {
+        servers.forEach(async (server) => {
+          const c = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
+          const t = gameData.teams;
+          await c.send(`${t.home.team.name} ${t.home.score} - ${t.away.team.name} ${t.away.score}`);
+        });
+        clearInterval(ping);
+      }
+    }, 1000 * 60);
   }
 
   private resolveAsTextOrFail(channel: AnyChannel) {

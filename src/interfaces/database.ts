@@ -11,3 +11,9 @@ export interface user {
   userId: string;
   sentAttachments: number;
 }
+
+export interface game {
+  highlightId: string;
+  gameId: number;
+  gameStart: Date;
+}
