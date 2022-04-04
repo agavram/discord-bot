@@ -7,7 +7,6 @@ import { EventEmitter } from 'events';
 import { find, orderBy, some } from 'lodash';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
-import { resolve } from 'path';
 import { isProd } from '../helpers/functions';
 import { phonetics } from '../helpers/phonetic-alphabet';
 import { game, premove, server, user } from '../interfaces/database';
