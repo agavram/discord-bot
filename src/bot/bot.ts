@@ -252,12 +252,19 @@ export default class Bot {
     });
 
     command.on('premove', async (message: Message) => {
+      if (message.author.bot) return;
       const [num, ...msg] = message.content.trim().split(' ');
       const id = parseInt(num);
 
       message.delete();
       if (isNaN(id) || !msg || !msg.length) return message.channel.send('Syntax: {prefix}premove {userId} {message}');
       if (id === parseInt(message.author.id)) return message.channel.send('You cannot premove yourself');
+      try {
+        const member = await message.guild.members.fetch(num);
+        if (member.user.bot) return message.channel.send('Can\'t premove bots');
+      } catch (e) {
+        return message.channel.send('The user you are trying to premove doesn\'t exist on this server');
+      }
 
       const content = msg.join(' ').trim();
       this.ps = await this.premoves.find();
