@@ -7,6 +7,7 @@ import { EventEmitter } from 'events';
 import { find, orderBy, some } from 'lodash';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
+import { resolve } from 'path';
 import { isProd } from '../helpers/functions';
 import { phonetics } from '../helpers/phonetic-alphabet';
 import { game, premove, server, user } from '../interfaces/database';
@@ -144,39 +145,39 @@ export default class Bot {
 
     this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
-
       const msg = message.content;
-      const msgLowerCase = msg.toLocaleLowerCase();
 
-      // Brazil
-      if (message.guild.id === '856029113747111946') {
-        if (msgLowerCase.includes('texas')) {
-          message.react('<:OMEGALUL:856976423101399081>');
-        } else if (msgLowerCase.includes('houston') || msgLowerCase.includes('oakland')) {
+      // BRAZIL
+      (() => {
+        const msgLowerCase = msg.toLowerCase();
+        if (message.guild.id !== '856029113747111946') return;
+        if (msgLowerCase.includes('texas')) message.react('<:OMEGALUL:856976423101399081>');
+        else if (msgLowerCase.includes('houston') || msgLowerCase.includes('oakland')) {
           message.react('<:mariners:857120069821530142>');
         }
-        if (msgLowerCase === 'when') {
-          let reply = 'me when the ';
-          const length: number = Math.round(Math.random() * 88);
 
-          while (reply.length < length) {
-            const index = Math.floor(Math.random() * this.dictionary.length);
-            reply += this.dictionary[index] + ' ';
-          }
-          message.reply({ allowedMentions: { repliedUser: false }, content: reply });
+        if (msgLowerCase !== 'when') return;
+        let content = 'me when the ';
+        const length: number = Math.round(Math.random() * 88);
+
+        while (content.length < length) {
+          const index = Math.floor(Math.random() * this.dictionary.length);
+          content += this.dictionary[index] + ' ';
         }
-      }
+        message.reply({ allowedMentions: { repliedUser: false }, content });
+      })();
 
-      // ------------------------------------------------------------
-      if (!this.ps) this.ps = await this.premoves.find();
-      const id = parseInt(message.author.id);
-      const p = find(this.ps, (p) => p.targetUser === id);
-      if (p) {
-        const reply: string = p.moves.shift();
-        message.reply({ allowedMentions: { repliedUser: false }, content: reply });
+      // PREMOVE
+      await (async () => {
+        if (!this.ps) this.ps = await this.premoves.find();
+        const id = parseInt(message.author.id);
+        const p = find(this.ps, (p) => p.targetUser === id);
+        if (!p) return;
+
+        const content: string = p.moves.shift();
+        message.reply({ allowedMentions: { repliedUser: false }, content });
         if (!p.moves.length) await p.delete();
-      }
-      // ------------------------------------------------------------
+      })();
 
       if (!msg.startsWith(this.prefix)) return;
 
@@ -252,22 +253,14 @@ export default class Bot {
     });
 
     command.on('premove', async (message: Message) => {
-      const split = message.content.trim().split(' ');
+      const [num, ...msg] = message.content.trim().split(' ');
+      const id = parseInt(num);
 
       message.delete();
+      if (isNaN(id) || !msg || !msg.length) return message.channel.send('Syntax: {prefix}premove {userId} {message}');
+      if (id === parseInt(message.author.id)) return message.channel.send('You cannot premove yourself');
 
-      if (split.length < 2) {
-        message.channel.send('Syntax: {prefix}premove {userId} {message}');
-        return;
-      }
-
-      const id = parseInt(split[0].trim());
-      if (isNaN(id)) {
-        message.channel.send('Syntax: {prefix}premove {userId} {message}');
-        return;
-      }
-
-      const premove_message = split.splice(1).join(' ').trim();
+      const content = msg.join(' ').trim();
       this.ps = await this.premoves.find();
       let p = find(this.ps, (p) => p.targetUser === id);
       if (!p) {
@@ -278,10 +271,8 @@ export default class Bot {
         this.ps.push(p);
       }
 
-      p.moves.push(premove_message);
-      if (p.moves.length > Bot.PREMOVE_QUEUE_SIZE) {
-        p.moves.shift();
-      }
+      p.moves.push(content);
+      if (p.moves.length > Bot.PREMOVE_QUEUE_SIZE) p.moves.shift();
       await p.save();
     });
 
@@ -317,9 +308,7 @@ export default class Bot {
 
       // Title
       title = split[0].trim();
-      if (!title.length) {
-        title = 'Untitled';
-      }
+      if (!title.length) title = 'Untitled';
 
       // Checks for valid choices
       split = split[1].split(',');
