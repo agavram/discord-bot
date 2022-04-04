@@ -17,3 +17,8 @@ export interface game {
   gameId: number;
   gameStart: Date;
 }
+
+export interface premove {
+  targetUser: number;
+  moves: Array<string>;
+}

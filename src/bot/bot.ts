@@ -4,12 +4,12 @@ import { job } from 'cron';
 import { AnyChannel, Client, Guild, Message, MessageEmbed, MessageReaction, User } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
-import { orderBy, some } from 'lodash';
+import { find, orderBy, some } from 'lodash';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 import { isProd } from '../helpers/functions';
 import { phonetics } from '../helpers/phonetic-alphabet';
-import { game, server, user } from '../interfaces/database';
+import { game, premove, server, user } from '../interfaces/database';
 import { Game, GameSchedule } from '../interfaces/game-schedule';
 import { GameStatus } from '../interfaces/game-status';
 import { GameUpdates } from '../interfaces/game-updates';
@@ -31,11 +31,16 @@ export default class Bot {
   servers: mongoose.Model<server>;
   users: mongoose.Model<user>;
   gameHighlights: mongoose.Model<game>;
+  premoves: mongoose.Model<premove>;
+
+  ps: (mongoose.Document<unknown, unknown, premove> &
+    premove & {
+      _id: mongoose.Types.ObjectId;
+    })[];
 
   prefix = '!';
 
   dictionary: string[] = ['when', 'the', 'me'];
-  premoves: Map<number, string[]> = new Map<number, string[]>();
 
   readonly redditColor = '#FF4500';
 
@@ -91,6 +96,14 @@ export default class Bot {
           }),
         );
 
+        this.premoves = mongoose.model(
+          'premoves',
+          new mongoose.Schema<premove>({
+            targetUser: { type: Number, required: true },
+            moves: { type: [String], required: true },
+          }),
+        );
+
         this.animeDetector.initialize();
 
         this.client.once('ready', () => {
@@ -129,7 +142,7 @@ export default class Bot {
       });
     });
 
-    this.client.on('messageCreate', (message) => {
+    this.client.on('messageCreate', async (message) => {
       if (message.author.bot) return;
 
       const msg = message.content;
@@ -154,14 +167,16 @@ export default class Bot {
         }
       }
 
+      // ------------------------------------------------------------
+      if (!this.ps) this.ps = await this.premoves.find();
       const id = parseInt(message.author.id);
-      if (this.premoves.has(id)) {
-        const reply: string = this.premoves.get(id).shift();
+      const p = find(this.ps, (p) => p.targetUser === id);
+      if (p) {
+        const reply: string = p.moves.shift();
         message.reply({ allowedMentions: { repliedUser: false }, content: reply });
-        if (!this.premoves.get(id).length) {
-          this.premoves.delete(id);
-        }
+        if (!p.moves.length) await p.delete();
       }
+      // ------------------------------------------------------------
 
       if (!msg.startsWith(this.prefix)) return;
 
@@ -236,7 +251,7 @@ export default class Bot {
       message.channel.send({ files: [await LatexConverter.convert(message.content)] });
     });
 
-    command.on('premove', (message: Message) => {
+    command.on('premove', async (message: Message) => {
       const split = message.content.trim().split(' ');
 
       message.delete();
@@ -246,22 +261,28 @@ export default class Bot {
         return;
       }
 
-      const userId = parseInt(split[0].trim());
-      if (isNaN(userId)) {
+      const id = parseInt(split[0].trim());
+      if (isNaN(id)) {
         message.channel.send('Syntax: {prefix}premove {userId} {message}');
         return;
       }
 
       const premove_message = split.splice(1).join(' ').trim();
-      if (!this.premoves.has(userId)) {
-        this.premoves.set(userId, []);
+      this.ps = await this.premoves.find();
+      let p = find(this.ps, (p) => p.targetUser === id);
+      if (!p) {
+        p = await this.premoves.create({
+          targetUser: id,
+          moves: [],
+        });
+        this.ps.push(p);
       }
 
-      const q = this.premoves.get(userId);
-      q.push(premove_message);
-      if (q.length > Bot.PREMOVE_QUEUE_SIZE) {
-        q.shift();
+      p.moves.push(premove_message);
+      if (p.moves.length > Bot.PREMOVE_QUEUE_SIZE) {
+        p.moves.shift();
       }
+      await p.save();
     });
 
     command.on('isanime', async (message: Message) => {
