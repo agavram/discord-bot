@@ -20,8 +20,6 @@ import { LatexConverter } from '../plugins/latex';
 import { RobinHoodPlugin } from '../plugins/ticker';
 dotenv.config();
 
-require('discord-reply');
-
 export default class Bot {
   public Ready: Promise<void>;
 
@@ -152,16 +150,14 @@ export default class Bot {
             const index = Math.floor(Math.random() * this.dictionary.length);
             reply += this.dictionary[index] + ' ';
           }
-          // @ts-expect-error lineReplyNoMention is imported from discord-reply
-          message.lineReplyNoMention(reply);
+          message.reply({ allowedMentions: { repliedUser: false }, content: reply });
         }
       }
 
       const id = parseInt(message.author.id);
       if (this.premoves.has(id)) {
         const reply: string = this.premoves.get(id).shift();
-        // @ts-expect-error lineReplyNoMention is imported from discord-reply
-        message.lineReplyNoMention(reply);
+        message.reply({ allowedMentions: { repliedUser: false }, content: reply });
         if (!this.premoves.get(id).length) {
           this.premoves.delete(id);
         }
