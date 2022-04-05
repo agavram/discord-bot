@@ -19,6 +19,6 @@ export interface game {
 }
 
 export interface premove {
-  targetUser: number;
+  targetUser: string;
   moves: Array<string>;
 }

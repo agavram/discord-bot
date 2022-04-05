@@ -4,7 +4,7 @@ import { job } from 'cron';
 import { AnyChannel, Client, Guild, Message, MessageEmbed, MessageReaction, User } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
-import { find, orderBy, some } from 'lodash';
+import { filter, find, orderBy, some } from 'lodash';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 import { isProd } from '../helpers/functions';
@@ -99,7 +99,7 @@ export default class Bot {
         this.premoves = mongoose.model(
           'premoves',
           new mongoose.Schema<premove>({
-            targetUser: { type: Number, required: true },
+            targetUser: { type: String, required: true },
             moves: { type: [String], required: true },
           }),
         );
@@ -169,13 +169,15 @@ export default class Bot {
       // PREMOVE
       await (async () => {
         if (!this.ps) this.ps = await this.premoves.find();
-        const id = parseInt(message.author.id);
-        const p = find(this.ps, (p) => p.targetUser === id);
+        const p = find(this.ps, (p) => p.targetUser === message.author.id);
         if (!p) return;
 
         const content: string = p.moves.shift();
         message.reply({ allowedMentions: { repliedUser: false }, content });
-        if (!p.moves.length) await p.delete();
+        if (!p.moves.length) {
+          await p.delete();
+          this.ps = filter(this.ps, (m) => m._id != p._id);
+        }
       })();
 
       if (!msg.startsWith(this.prefix)) return;
@@ -252,12 +254,12 @@ export default class Bot {
     });
 
     command.on('premove', async (message: Message) => {
-      const [num, ...msg] = message.content.trim().split(' ');
-      const id = parseInt(num);
+      const [id, ...msg] = message.content.trim().split(' ');
 
       message.delete();
-      if (isNaN(id) || !msg || !msg.length) return message.channel.send('Syntax: {prefix}premove {userId} {message}');
-      if (id === parseInt(message.author.id)) return message.channel.send('You cannot premove yourself');
+      if (!id || !msg || !msg.length) return message.channel.send('Syntax: {prefix}premove {userId} {message}');
+      const m = await message.guild.members.resolve(id);
+      if (!m || m.user.bot) return message.channel.send('Invalid user id');
 
       const content = msg.join(' ').trim();
       this.ps = await this.premoves.find();
