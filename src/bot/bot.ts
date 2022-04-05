@@ -504,6 +504,7 @@ export default class Bot {
 
   private async postHighlightsForGame(game: Game) {
     const servers = await this.servers.find({ channelMariners: { $exists: true } });
+    await this.gameHighlights.deleteMany({ gameId: { $ne: game.gamePk } });
     if (!servers) throw new Error('Unable to fetch servers');
 
     const isGameOver = async (gamePk: number) => {
@@ -514,17 +515,7 @@ export default class Bot {
       return false;
     };
 
-    if (!isGameOver(game.gamePk)) {
-      servers.forEach((server) => {
-        this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners)).send(
-          `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(game.gameDate).format('h:mm A')}`,
-        );
-      });
-    }
-
-    await this.gameHighlights.deleteMany({ gameId: { $ne: game.gamePk } });
-
-    const ping = setInterval(async () => {
+    const sendMissingUpdates = async () => {
       const gameUpdates: GameUpdates = (await axios.get(`http://statsapi.mlb.com/api/v1/game/${game.gamePk}/content`)).data;
       let highlights = gameUpdates.highlights.highlights.items;
       highlights = orderBy(highlights, (update) => new Date(update.date), 'asc');
@@ -539,30 +530,42 @@ export default class Bot {
           highlightId: update.id,
         });
 
-        try {
-          servers.forEach(async (server) => {
-            this.client.channels.resolve(server.channelMariners);
-            const channel = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
-            await channel.send(update.blurb + '\n' + update.playbacks[0].url);
-          });
-        } catch (error) {
-          console.error(error);
-          console.error('Could not send message');
-          console.error(update.blurb);
-          console.error(update.playbacks[0].url);
-        }
+        servers.forEach(async (server) => {
+          this.client.channels.resolve(server.channelMariners);
+          const channel = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
+          await channel.send(update.blurb + '\n' + update.playbacks[0].url);
+        });
       }
 
       const gameData = await isGameOver(game.gamePk);
       if (gameData) {
+        clearInterval(ping);
+        if (some(highlightsPosted, (h) => h.highlightId === 'end')) return;
         servers.forEach(async (server) => {
           const c = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners));
           const t = gameData.teams;
           await c.send(`${t.home.team.name} ${t.home.score} - ${t.away.team.name} ${t.away.score}`);
         });
-        clearInterval(ping);
+        await this.gameHighlights.create({
+          gameId: game.gamePk,
+          gameStart: game.gameDate,
+          highlightId: 'end',
+        });
       }
-    }, 1000 * 60);
+    };
+
+    const ping = setInterval(sendMissingUpdates, 1000 * 60);
+    if (await this.gameHighlights.countDocuments({ highlightId: 'start' })) return;
+    servers.forEach((server) => {
+      this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners)).send(
+        `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(game.gameDate).format('h:mm A')}`,
+      );
+    });
+    await this.gameHighlights.create({
+      gameId: game.gamePk,
+      gameStart: game.gameDate,
+      highlightId: 'start',
+    });
   }
 
   private resolveAsTextOrFail(channel: AnyChannel) {
