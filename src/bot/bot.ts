@@ -279,19 +279,13 @@ export default class Bot {
 
     command.on('isanime', async (message: Message) => {
       const urlMatch = /[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)?/gi;
-      if (!message.content || !urlMatch.test(message.content)) {
-        message.channel.send('Invalid URL');
-        return;
-      }
+      if (!message.content || !urlMatch.test(message.content)) return message.channel.send('Invalid URL');
 
       const res = await this.animeDetector.predict(message.content);
       if (Array.isArray(res)) return message.channel.send('Unable to process image');
       const d = res.dataSync;
 
-      if (d[0] < 0.1 && d[1] < 0.1) {
-        message.channel.send('Unknown');
-        return;
-      }
+      if (d[0] < 0.1 && d[1] < 0.1) return message.channel.send('Unknown');
 
       if (d[0] > d[1]) message.channel.send('Anime: ' + Math.round(d[0] * 100) + '% Confident');
       else message.channel.send('Not Anime: ' + Math.round(d[1] * 100) + '% Confident');
@@ -322,10 +316,7 @@ export default class Bot {
         }
       }
 
-      if (!split.length) {
-        message.channel.send('Poll must contain at least 1 choice');
-        return;
-      }
+      if (!split.length) return message.channel.send('Poll must contain at least 1 choice');
 
       // Creates poll contents, up to 10 choices
       const pollSize = Math.min(split.length, 10);
@@ -362,12 +353,8 @@ export default class Bot {
           let previous = undefined;
           messages.delete(messages.firstKey());
           messagesToDelete = messages.filter((message) => {
-            if (message.author.id !== userId && previous != undefined) {
-              previous = false;
-            }
-            if (previous != undefined && !previous) {
-              return false;
-            }
+            if (message.author.id !== userId && previous != undefined) previous = false;
+            if (previous != undefined && !previous) return false;
             if (message.author.id === userId) {
               previous = true;
               return true;
@@ -462,9 +449,7 @@ export default class Bot {
     command.on('ticker', async (message: Message) => {
       const [query, timeLength] = message.content.split(' ');
       const image = await RobinHoodPlugin.fetchTicker(query, timeLength && timeLength.toUpperCase());
-      if (image) {
-        message.channel.send({ files: [image] });
-      }
+      if (image) message.channel.send({ files: [image] });
     });
 
     command.on('cum', (message: Message) => {
@@ -486,9 +471,7 @@ export default class Bot {
     for (const game of games ?? []) {
       if (game.teams.away.team.id === 136 || game.teams.home.team.id === 136) {
         const gameStart = new Date(game.gameDate);
-        if (gameStart < new Date()) {
-          return this.postHighlightsForGame(game);
-        }
+        if (gameStart < new Date()) return this.postHighlightsForGame(game);
 
         const notificationTime = new Date(gameStart.getTime() - 1000 * 60 * 10);
         console.log('Notifying for game at: ' + notificationTime.toString());
