@@ -176,7 +176,7 @@ export default class Bot {
         message.reply({ allowedMentions: { repliedUser: false }, content });
         if (!p.moves.length) {
           await p.delete();
-          this.ps = filter(this.ps, (m) => m._id != p._id);
+          this.ps = filter(this.ps, (m) => m._id !== p._id);
         }
       })();
 
@@ -204,7 +204,7 @@ export default class Bot {
       this.client.on(e, async (messageReaction: MessageReaction, user: User) => {
         if (messageReaction.message.partial) await messageReaction.message.fetch();
 
-        if (user.bot || messageReaction.message.author.id !== this.client.user.id || messageReaction.message.embeds.length == 0) return;
+        if (user.bot || messageReaction.message.author.id !== this.client.user.id || messageReaction.message.embeds.length === 0) return;
 
         const guild = this.client.guilds.resolve(messageReaction.message.guild.id);
         reaction.emit(messageReaction.emoji.name, messageReaction, user, guild, e);
@@ -310,7 +310,7 @@ export default class Bot {
       for (let i = 0; i < split.length; i++) {
         split[i] = split[i].trim();
 
-        if (split[i].length == 0) {
+        if (split[i].length === 0) {
           split.splice(i, 1);
           i--;
         }
@@ -349,12 +349,11 @@ export default class Bot {
       tc.messages
         .fetch({ limit: 100 })
         .then(async (messages) => {
-          // messages = messages.filter(message => message.author.id === )
           let previous = undefined;
           messages.delete(messages.firstKey());
           messagesToDelete = messages.filter((message) => {
-            if (message.author.id !== userId && previous != undefined) previous = false;
-            if (previous != undefined && !previous) return false;
+            if (message.author.id !== userId && previous !== undefined) previous = false;
+            if (previous !== undefined && !previous) return false;
             if (message.author.id === userId) {
               previous = true;
               return true;
@@ -422,7 +421,7 @@ export default class Bot {
 
       for (const c of input) {
         if (phonetics[c.toUpperCase()]) output += phonetics[c.toUpperCase()] + ' ';
-        else if (c == ' ') output = output.substring(0, output.length - 1) + '|';
+        else if (c === ' ') output = output.substring(0, output.length - 1) + '|';
         else output = output.substring(0, output.length - 1) + c;
       }
 

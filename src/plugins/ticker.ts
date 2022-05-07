@@ -9,15 +9,15 @@ export class RobinHoodPlugin {
 
     let image;
     try {
-      await page.waitForSelector('.js-feed__item.tv-feed-widget-chart.js-feed__item--inited ');
+      await page.waitForSelector('.item-G1QqQDLk');
 
-      const ticker = await page.$('.js-feed__item.tv-feed-widget-chart.js-feed__item--inited ');
+      const ticker = await page.$('.tv-feed-widget-chart__container');
 
-      await page.waitForSelector('.item-3cgIlGYO');
-      const [selection] = await page.$x(`//div[contains(@class, 'item-3cgIlGYO') and contains(., "${timeLength}")]`);
+      await page.waitForSelector('.item-G1QqQDLk');
+      const [selection] = await page.$x(`//div[contains(@class, 'item-G1QqQDLk') and contains(., "${timeLength}")]`);
       await selection.click();
       await page.mouse.move(0, 0);
-      await page.waitFor(() => !document.querySelector('.shown-1QFCxvPl'));
+      await page.waitForSelector('.fade-nybNAiFo', { hidden: true });
 
       image = await ticker.screenshot();
     } catch (e) {
