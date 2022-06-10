@@ -241,32 +241,27 @@ export default class Bot {
     });
 
     command.on('scrape', async () => {
-      const tc = await this.client.channels.fetch('377316512454672386') as TextChannel;
+      const tc = (await this.client.channels.fetch('377316512454672386')) as TextChannel;
       fetchAllMessages(tc);
     });
 
     async function fetchAllMessages(channel: TextChannel) {
       const messages = [];
-    
+
       // Create message pointer
-      let message = await channel.messages
-        .fetch({ limit: 1 })
-        .then(messagePage => (messagePage.size === 1 ? messagePage.at(0) : null));
-    
+      let message = await channel.messages.fetch({ limit: 1 }).then((messagePage) => (messagePage.size === 1 ? messagePage.at(0) : null));
+
       while (message) {
-        await channel.messages
-          .fetch({ limit: 100, before: message.id })
-          .then(messagePage => {
-            messagePage.forEach(msg => console.log(msg.content));
-    
-            // Update our message pointer to be last message in page of messages
-            message = 0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
-          })
+        await channel.messages.fetch({ limit: 100, before: message.id }).then((messagePage) => {
+          messagePage.forEach((msg) => console.log(msg.content));
+
+          // Update our message pointer to be last message in page of messages
+          message = 0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
+        });
       }
-    
-      console.log(messages);  // Print all messages
+
+      console.log(messages); // Print all messages
     }
-    
 
     command.on('help', (message: Message) => {
       message.channel.send('<https://github.com/agavram/Discord_Bot/blob/master/HELP.md>');
@@ -374,7 +369,7 @@ export default class Bot {
 
       const tc = this.resolveAsTextOrFail(message.channel);
       let messagesToDelete;
-      
+
       tc.messages
         .fetch({ limit: 100 })
         .then(async (messages) => {
