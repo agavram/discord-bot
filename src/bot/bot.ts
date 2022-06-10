@@ -64,7 +64,7 @@ export default class Bot {
           'DIRECT_MESSAGE_REACTIONS',
         ],
       });
-      this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN), (this.animeDetector = new AnimeDetector());
+      this.animeDetector = new AnimeDetector();
 
       mongoose.connect(process.env.MONGODB_URI).then(() => {
         this.servers = mongoose.model(
@@ -139,6 +139,8 @@ export default class Bot {
 
           resolve();
         });
+
+        this.client.login(isProd() ? process.env.BOT_TOKEN : process.env.TEST_BOT_TOKEN);
       });
     });
 
