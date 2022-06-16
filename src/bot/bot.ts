@@ -179,6 +179,8 @@ export default class Bot {
         if (!p.moves.length) {
           await p.delete();
           this.ps = filter(this.ps, (m) => m._id !== p._id);
+        } else {
+          p.save();
         }
       })();
 
