@@ -7,11 +7,8 @@ bot.Ready.then(() => {
   console.log('Ready');
 });
 
-process.on('SIGINT', function() {
-  mongoose.disconnect();
-});
-
-
-process.on('SIGTERM', function() {
-  mongoose.disconnect();
-});
+['exit', 'SIGINT', 'SIGTERM'].forEach(
+  e => process.on(e, () => {
+    mongoose.disconnect();
+  })
+);

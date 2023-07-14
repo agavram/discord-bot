@@ -177,7 +177,7 @@ export default class Bot {
         const content: string = p.moves.shift();
         message.reply({ allowedMentions: { repliedUser: false }, content });
         if (!p.moves.length) {
-          await p.delete();
+          await p.deleteOne();
           this.ps = filter(this.ps, (m) => m._id !== p._id);
         } else {
           p.save();
