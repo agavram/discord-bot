@@ -631,6 +631,9 @@ export default class Bot {
         if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
           mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + 'mp4';
           embed.description = mediaUrl;
+        } else if (mediaUrl.includes("v.reddit.it")) {
+          mediaUrl = post.media.reddit_video.fallback_url;
+          embed.description = mediaUrl;
         } else embed.image = { url: mediaUrl };
 
         const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes));
