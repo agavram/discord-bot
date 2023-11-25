@@ -2,7 +2,7 @@
   "name": "discord_bot",
   "version": "1.0.0",
   "main": "dist/app.js",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "deploy": "tsc && pm2 start dist/app.js",
     "start": "node dist/app.js",
