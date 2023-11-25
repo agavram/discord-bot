@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "deploy": "tsc && pm2 start dist/app.js",
+    "start": "node dist/app.js",
     "start:dev": "ts-node-dev --files src/app.ts",
     "dev": "npm run start:dev",
     "build": "tsc",
