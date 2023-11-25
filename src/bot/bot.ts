@@ -631,7 +631,7 @@ export default class Bot {
         if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
           mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + 'mp4';
           embed.description = mediaUrl;
-        } else if (mediaUrl.includes("v.reddit.it")) {
+        } else if (mediaUrl.includes("v.redd.it")) {
           // @ts-expect-error reddit_video is not in the type definition
           mediaUrl = post.media.reddit_video.fallback_url;
           embed.description = mediaUrl;
@@ -639,7 +639,7 @@ export default class Bot {
 
         const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes));
         tc.send({ embeds: [embed] }).then(() => {
-          if (mediaUrl.endsWith('mp4')) tc.send({ files: [mediaUrl] });
+          if (mediaUrl.endsWith('mp4') || mediaUrl.includes("v.redd.it")) tc.send({ files: [mediaUrl] });
         });
 
         break;

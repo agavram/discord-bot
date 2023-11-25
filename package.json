@@ -25,7 +25,7 @@
     "jimp": "^0.16.13",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
-    "mongoose": "^7.6.4",
+    "mongoose": "^8.0.1",
     "puppeteer": "^13.7.0",
     "sherlockjs": "^1.4.2",
     "utf-8-validate": "^5.0.10"
