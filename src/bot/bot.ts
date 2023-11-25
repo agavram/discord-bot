@@ -632,6 +632,7 @@ export default class Bot {
           mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + 'mp4';
           embed.description = mediaUrl;
         } else if (mediaUrl.includes("v.reddit.it")) {
+          // @ts-expect-error reddit_video is not in the type definition
           mediaUrl = post.media.reddit_video.fallback_url;
           embed.description = mediaUrl;
         } else embed.image = { url: mediaUrl };
