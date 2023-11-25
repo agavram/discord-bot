@@ -1,7 +1,8 @@
 {
   "name": "discord_bot",
   "version": "1.0.0",
-  "main": "src/app.ts",
+  "main": "dist/app.js",
+  "type": "module",
   "scripts": {
     "deploy": "tsc && pm2 start dist/app.js",
     "start:dev": "ts-node-dev --files src/app.ts",
