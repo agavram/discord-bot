@@ -60,6 +60,7 @@ export default class Bot {
           'GuildBans',
           'DirectMessages',
           'DirectMessageReactions',
+          'MessageContent',
         ],
       });
       this.animeDetector = new AnimeDetector();
