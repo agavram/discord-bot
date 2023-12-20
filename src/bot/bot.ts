@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { execSync } from 'child_process';
 import { job } from 'cron';
-import { AnyChannel, Client, Guild, Message, MessageEmbed, MessageReaction, TextChannel, User } from 'discord.js';
+import { ChannelType, Client, EmbedBuilder, Guild, Message, MessageReaction, Partials, TextChannel, User, Channel } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
 import { filter, find, orderBy, some } from 'lodash';
@@ -15,9 +15,7 @@ import { GameStatus } from '../interfaces/game-status';
 import { GameUpdates } from '../interfaces/game-updates';
 import { Child, Data2 } from '../interfaces/reddit';
 import { AnimeDetector } from '../plugins/anime-detector';
-import { GoogleSearchPlugin } from '../plugins/google';
 import { LatexConverter } from '../plugins/latex';
-import { RobinHoodPlugin } from '../plugins/ticker';
 dotenv.config();
 
 export default class Bot {
@@ -51,17 +49,17 @@ export default class Bot {
 
     this.Ready = new Promise((resolve) => {
       this.client = new Client({
-        partials: ['CHANNEL', 'MESSAGE', 'REACTION', 'GUILD_MEMBER', 'USER'],
+        partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.GuildMember, Partials.User],
         intents: [
-          'GUILDS',
-          'GUILD_MEMBERS',
-          'GUILD_MESSAGES',
-          'GUILD_MESSAGE_REACTIONS',
-          'GUILD_INVITES',
-          'GUILD_EMOJIS_AND_STICKERS',
-          'GUILD_BANS',
-          'DIRECT_MESSAGES',
-          'DIRECT_MESSAGE_REACTIONS',
+          'Guilds',
+          'GuildMembers',
+          'GuildMessages',
+          'GuildMessageReactions',
+          'GuildInvites',
+          'GuildEmojisAndStickers',
+          'GuildBans',
+          'DirectMessages',
+          'DirectMessageReactions',
         ],
       });
       this.animeDetector = new AnimeDetector();
@@ -190,13 +188,13 @@ export default class Bot {
 
       let emitter: EventEmitter;
       switch (message.channel.type) {
-        case 'GUILD_TEXT':
-        case 'GUILD_PUBLIC_THREAD':
-        case 'GUILD_PRIVATE_THREAD':
+        case ChannelType.GuildText:
+        case ChannelType.PublicThread:
+        case ChannelType.PrivateThread:
           emitter = command;
           break;
 
-        case 'DM':
+        case ChannelType.DM:
           emitter = dm;
           break;
       }
@@ -218,6 +216,7 @@ export default class Bot {
     reaction.on('upvote', (reaction: MessageReaction, user: User, guild: Guild, event) => {
       const embed = reaction.message.embeds[0];
       if (event !== 'messageReactionAdd' || !embed.author) return;
+      const edited = new EmbedBuilder(embed);
 
       this.servers.findOne({ server: reaction.message.guild.id }).then((server) => {
         if (reaction.message.channel.id !== server.channelMemes) return;
@@ -232,11 +231,11 @@ export default class Bot {
             return false;
 
           if (user.partial) await user.fetch();
-          embed.footer = {
+          edited.setFooter({
             text: guild.members.resolve(user).displayName + ' shared this meme',
-          };
+          });
 
-          tc.send({ embeds: [embed] }).then(() => {
+          tc.send({ embeds: [edited] }).then(() => {
             // Check if video was included in description. If so then send that too
             if (embed.description) tc.send({ files: [embed.description] });
           });
@@ -354,7 +353,7 @@ export default class Bot {
       choices += split.length + ': ' + split[pollSize - 1];
 
       // Embeds, sends, and reacts
-      const embed = new MessageEmbed().setTitle(title).setDescription(choices);
+      const embed = new EmbedBuilder().setTitle(title).setDescription(choices);
 
       const emoteList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'].splice(0, pollSize);
 
@@ -390,7 +389,7 @@ export default class Bot {
           });
         })
         .then(() => {
-          if (tc.type === 'GUILD_TEXT') tc.bulkDelete(messagesToDelete);
+          if (tc.type === ChannelType.GuildText) tc.bulkDelete(messagesToDelete);
           message.delete();
         });
     });
@@ -415,7 +414,7 @@ export default class Bot {
         .then((res) => {
           let output = res.data.output;
           output = output.split('\n').slice(0, 20).join('\n');
-          const embed = new MessageEmbed().setTitle('Output:');
+          const embed = new EmbedBuilder().setTitle('Output:');
           embed.setDescription('```\n' + output + '\n```');
           message.channel.send({ embeds: [embed] });
         })
@@ -435,7 +434,7 @@ export default class Bot {
     });
 
     command.on('vote', (message: Message) => {
-      const embed = new MessageEmbed().setTitle(message.content);
+      const embed = new EmbedBuilder().setTitle(message.content);
 
       message.channel.send({ embeds: [embed] }).then((sent) => {
         sent.react('✅');
@@ -458,25 +457,6 @@ export default class Bot {
 
     command.on('ping', (message: Message) => {
       message.channel.send(this.client.ws.ping + ' ms');
-    });
-
-    command.on('search', async (message: Message) => {
-      this.servers.findOne({ server: message.guild.id }).then(async (server) => {
-        if (server.channelGeneral === message.channel.id) {
-          return message.channel.send('no');
-        }
-
-        const results = await GoogleSearchPlugin.search(message.content);
-
-        const embed = new MessageEmbed().addFields(results);
-        message.channel.send({ embeds: [embed] });
-      });
-    });
-
-    command.on('ticker', async (message: Message) => {
-      const [query, timeLength] = message.content.split(' ');
-      const image = await RobinHoodPlugin.fetchTicker(query, timeLength && timeLength.toUpperCase());
-      if (image) message.channel.send({ files: [image] });
     });
 
     command.on('cum', (message: Message) => {
@@ -580,8 +560,8 @@ export default class Bot {
     });
   }
 
-  private resolveAsTextOrFail(channel: AnyChannel) {
-    if (channel.isText()) return channel;
+  private resolveAsTextOrFail(channel: Channel) {
+    if (channel.type === ChannelType.GuildText) return channel;
     else console.error(`${channel} did not resolve to a text or thread channel`);
   }
 
@@ -610,13 +590,13 @@ export default class Bot {
         if (server.posts.length > 48) server.posts.shift();
 
         server.posts.push(post.id);
-        server.save();
+        server.updateOne();
 
         // Attempt to get an image
         let mediaUrl: string = post.url;
 
         // Generate the embed to post to discord
-        const embed = new MessageEmbed()
+        const embed = new EmbedBuilder()
           .setColor(this.redditColor)
           .setTitle(post.title)
           .setURL('https://www.reddit.com' + post.permalink)
@@ -630,16 +610,17 @@ export default class Bot {
         // Check if post is video from imgur. gifv is proprietary so change the url to mp4
         if (mediaUrl.includes('imgur.com') && mediaUrl.endsWith('gifv')) {
           mediaUrl = mediaUrl.substring(0, mediaUrl.length - 4) + 'mp4';
-          embed.description = mediaUrl;
-        } else if (mediaUrl.includes("v.redd.it")) {
+          embed.setDescription(mediaUrl);
+        } else if (mediaUrl.includes('v.redd.it')) {
           // @ts-expect-error reddit_video is not in the type definition
           mediaUrl = post.media.reddit_video.fallback_url;
-          embed.description = mediaUrl;
-        } else embed.image = { url: mediaUrl };
+          embed.setDescription(mediaUrl);
+        } else embed.setImage(mediaUrl);
 
         const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes));
+        console.log('sending meme to channel: ' + tc.name);
         tc.send({ embeds: [embed] }).then(() => {
-          if (mediaUrl.endsWith('mp4') || mediaUrl.includes("v.redd.it")) tc.send({ files: [mediaUrl] });
+          if (mediaUrl.endsWith('mp4') || mediaUrl.includes('v.redd.it')) tc.send({ files: [mediaUrl] });
         });
 
         break;
