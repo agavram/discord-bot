@@ -4,7 +4,7 @@ import { job } from 'cron';
 import { ChannelType, Client, EmbedBuilder, Guild, Message, MessageReaction, Partials, TextChannel, User, Channel } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
-import { filter, find, orderBy, some } from 'lodash';
+import { filter, find, get, orderBy, some } from 'lodash';
 import * as moment from 'moment';
 import * as mongoose from 'mongoose';
 import { isProd } from '../helpers/functions';
@@ -561,9 +561,11 @@ export default class Bot {
     });
   }
 
-  private resolveAsTextOrFail(channel: Channel) {
-    if (channel.type === ChannelType.GuildText) return channel;
-    else console.error(`${channel} did not resolve to a text or thread channel`);
+  private resolveAsTextOrFail(channel: Channel): TextChannel {
+    if (channel.type === ChannelType.GuildText) {
+      return channel;
+    }
+    return undefined;
   }
 
   private async sendMeme(
@@ -572,15 +574,15 @@ export default class Bot {
         _id: mongoose.Types.ObjectId;
       })[],
   ) {
-    const res = await axios.get('https://www.reddit.com/r/whenthe/hot.json', {
-      headers: {
-        Authorization: process.env.REDDIT_SECRET,
-      },
-    });
-    if (res.status >= 400) {
-      servers.forEach((server) => {
-        this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes)).send('Reddit is down with status code: ' + res.status);
-      });
+    const res = await axios
+      .get('https://www.reddit.com/r/whenthe/hot.json', {
+        headers: {
+          Authorization: process.env.REDDIT_SECRET,
+        },
+      })
+      .catch((err) => console.error("Couldn't fetch reddit: " + err));
+    if (!res || res.status / 100 !== 2) {
+      console.error('Reddit request failed. Status:', get(res, 'status'));
       return;
     }
 
@@ -595,7 +597,7 @@ export default class Bot {
         if (server.posts.length > 48) server.posts.shift();
 
         server.posts.push(post.id);
-        server.updateOne();
+        server.save();
 
         // Attempt to get an image
         let mediaUrl: string = post.url;
@@ -623,7 +625,6 @@ export default class Bot {
         } else embed.setImage(mediaUrl);
 
         const tc = this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes));
-        console.log('sending meme to channel: ' + tc.name);
         tc.send({ embeds: [embed] }).then(() => {
           if (mediaUrl.endsWith('mp4') || mediaUrl.includes('v.redd.it')) tc.send({ files: [mediaUrl] });
         });
