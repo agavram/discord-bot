@@ -572,7 +572,11 @@ export default class Bot {
         _id: mongoose.Types.ObjectId;
       })[],
   ) {
-    const res = await axios.get('https://www.reddit.com/r/whenthe/hot.json');
+    const res = await axios.get('https://www.reddit.com/r/whenthe/hot.json', {
+      headers: {
+        Authorization: process.env.REDDIT_SECRET,
+      },
+    });
     if (res.status >= 400) {
       servers.forEach((server) => {
         this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMemes)).send('Reddit is down with status code: ' + res.status);
