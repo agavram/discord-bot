@@ -8,7 +8,7 @@
     "start": "node dist/app.js",
     "start:dev": "ts-node-dev --files src/app.ts",
     "dev": "npm run start:dev",
-    "build": "tsc",
+    "build": "tsc --outDir ./src/dist",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "author": "adrian",
