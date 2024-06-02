@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Bot from './bot/bot';
 
 const bot: Bot = new Bot();
@@ -8,7 +9,7 @@ bot.Ready.then(() => {
 
 ['exit', 'SIGINT', 'SIGTERM'].forEach((e) =>
   process.on(e, async () => {
-    // mongoose.disconnect();
+    mongoose.disconnect();
     console.log('Disconnecting...');
     await bot.client.destroy();
     console.log('Disconnected');

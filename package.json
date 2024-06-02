@@ -4,11 +4,11 @@
   "main": "dist/app.js",
   "type": "commonjs",
   "scripts": {
-    "deploy": "tsc && pm2 start dist/app.js",
-    "start": "node dist/app.js",
-    "start:dev": "ts-node-dev --files src/app.ts",
+    "deploy": "tsc && pm2 start ./dist/app.js",
+    "start": "node ./dist/app.js",
+    "start:dev": "ts-node-dev --files ./src/app.ts",
     "dev": "npm run start:dev",
-    "build": "tsc --outDir ./src/dist",
+    "build": "tsc",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "author": "adrian",
