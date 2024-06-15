@@ -13,5 +13,6 @@ bot.Ready.then(() => {
     console.log('Disconnecting...');
     await bot.client.destroy();
     console.log('Disconnected');
+    process.exit(0);
   }),
 );

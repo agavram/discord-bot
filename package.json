@@ -2,13 +2,10 @@
   "name": "discord_bot",
   "version": "1.0.0",
   "main": "dist/app.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "deploy": "tsc && pm2 start ./dist/app.js",
-    "start": "node ./dist/app.js",
-    "start:dev": "ts-node-dev --files ./src/app.ts",
-    "dev": "npm run start:dev",
-    "build": "tsc",
+    "start": "bun src/app.ts",
+    "dev": "bun --watch src/app.ts",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "author": "adrian",
@@ -22,11 +19,13 @@
     "jimp": "^0.16.13",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
-    "mongoose": "^8.0.3",
+    "mongoose": "^8.4.1",
     "sherlockjs": "^1.4.2",
-    "utf-8-validate": "^5.0.10"
+    "utf-8-validate": "^5.0.10",
+    "wrangler": "^3.58.0"
   },
   "devDependencies": {
+    "@flydotio/dockerfile": "^0.5.7",
     "@types/cron": "^1.7.3",
     "@types/lodash": "^4.14.200",
     "@types/node": "^18.18.8",
