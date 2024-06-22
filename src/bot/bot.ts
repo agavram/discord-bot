@@ -1,12 +1,12 @@
 import axios from 'axios';
 import { execSync } from 'child_process';
 import { job } from 'cron';
-import { ChannelType, Client, EmbedBuilder, Guild, Message, MessageReaction, Partials, TextChannel, User, Channel } from 'discord.js';
+import { format } from 'date-fns';
+import { Channel, ChannelType, Client, EmbedBuilder, Guild, Message, MessageReaction, Partials, TextChannel, User } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
 import { filter, find, get, orderBy, some } from 'lodash';
-import * as moment from 'moment';
-import * as mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import { isProd } from '../helpers/functions';
 import { phonetics } from '../helpers/phonetic-alphabet';
 import { game, premove, server, user } from '../interfaces/database';
@@ -551,7 +551,7 @@ export default class Bot {
     if (await this.gameHighlights.countDocuments({ highlightId: 'start' })) return;
     servers.forEach((server) => {
       this.resolveAsTextOrFail(this.client.channels.resolve(server.channelMariners)).send(
-        `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${moment(game.gameDate).format('h:mm A')}`,
+        `${game.teams.away.team.name} @ ${game.teams.home.team.name} - ${format(game.gameDate, 'h:mm aa')}`,
       );
     });
     await this.gameHighlights.create({
