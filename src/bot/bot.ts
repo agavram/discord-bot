@@ -578,6 +578,7 @@ export default class Bot {
       .get('https://www.reddit.com/r/whenthe/hot.json', {
         headers: {
           Authorization: process.env.REDDIT_SECRET,
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
         },
       })
       .catch((err) => console.error("Couldn't fetch reddit: " + err));
