@@ -18,3 +18,9 @@ primary_region = 'ewr'
 
 [[vm]]
   size = 'shared-cpu-1x'
+  memory = '512mb'
+
+[[restart]]
+  policy = "always"
+  retries = 999999
+  processes = ["app"]
