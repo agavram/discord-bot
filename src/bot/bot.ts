@@ -5,10 +5,11 @@ import { format } from 'date-fns';
 import { Channel, ChannelType, Client, EmbedBuilder, Guild, Message, MessageReaction, Partials, TextChannel, User } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { EventEmitter } from 'events';
-import { filter, find, get, orderBy, some } from 'lodash';
+import { filter, find, orderBy, some } from 'lodash';
 import mongoose from 'mongoose';
 import { isProd } from '../helpers/functions';
 import { phonetics } from '../helpers/phonetic-alphabet';
+import { RedditAPI } from '../helpers/reddit-auth';
 import { game, premove, server, user } from '../interfaces/database';
 import { Game, GameSchedule } from '../interfaces/game-schedule';
 import { GameStatus } from '../interfaces/game-status';
@@ -105,7 +106,7 @@ export default class Bot {
 
         this.animeDetector.initialize();
 
-        this.client.once('ready', () => {
+        this.client.once('clientReady', () => {
           job(
             '0,30 * * * *',
             () => {
@@ -574,20 +575,19 @@ export default class Bot {
         _id: mongoose.Types.ObjectId;
       })[],
   ) {
-    const res = await axios
-      .get('https://www.reddit.com/r/whenthe/hot.json', {
-        headers: {
-          Authorization: process.env.REDDIT_SECRET,
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-        },
-      })
-      .catch((err) => console.error("Couldn't fetch reddit: " + err));
-    if (!res || res.status / 100 !== 2) {
-      console.error('Reddit request failed. Status:', get(res, 'status'));
+    const reddit = new RedditAPI(process.env.REDDIT_CLIENT_ID, process.env.REDDIT_SECRET);
+
+    let posts: Array<Child>;
+    try {
+      posts = (await reddit.getHotPosts('whenthe')) as Array<Child>;
+    } catch (err) {
+      console.error("Couldn't fetch reddit: " + err);
       return;
     }
-
-    const posts: Array<Child> = res.data.data.children;
+    if (!posts || posts.length === 0) {
+      console.error('Reddit request failed or returned no posts.');
+      return;
+    }
 
     servers.forEach((server) => {
       for (let index = 0; index < posts.length; index++) {
